@@ -20,7 +20,7 @@ class UserBase(BaseModel):
 
 class RegisterRequest(BaseModel):
     full_name: str = Field(..., min_length=2, example="Vincent Nyawanda")
-    email: EmailStr = Field(..., example="operator@geon.com")
+    email: EmailStr = Field(..., example="operator@klip.com")
     password: str = Field(..., min_length=8)
     role: str = Field(..., example="operator")
 
@@ -51,3 +51,9 @@ class TokenResponse(BaseModel):
 class VerificationVerify(BaseModel):
     email: EmailStr
     code: str = Field(..., min_length=6, max_length=6)
+
+class RecoveryRequest(BaseModel):
+    """Schema for account recovery using recovery phrase"""
+    email: EmailStr
+    recovery_phrase: str = Field(..., min_length=20, description="12-word recovery phrase")
+    new_password: str = Field(..., min_length=8)

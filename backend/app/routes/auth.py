@@ -25,17 +25,18 @@ from app.schemas.auth import (
     LoginRequest, 
     TokenResponse,
     UserBase,
-    VerificationVerify
+    VerificationVerify,
+    RecoveryRequest
 )
 from app.services.email import (
     send_locked_email,
     send_restored_email,
-    send_verification_email, 
-    send_welcome_email, 
+    send_verification_email,
+    send_welcome_email,
 )
 
 # Configuration
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "root@geon.com")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "root@klip.com")
 ACCESS_TOKEN_EXPIRE_MINUTES = 30  # 30 minutes token expiry
 
 # Protocol Router
@@ -227,7 +228,7 @@ async def register(
     existing_user = db.query(User).filter(User.email == email_lowered).first()
     if existing_user:
         if is_privileged_enroller:
-            existing_user.role = payload.role.lower()
+            existing_user.role = AccountRole(payload.role.lower())
             existing_user.is_verified = True 
             db.commit()
             
@@ -267,7 +268,7 @@ async def register(
         hashed_password=hash_password(payload.password),
         recovery_hash=hash_password(recovery_phrase),
         operator_id=op_id,
-        role=payload.role.lower(),
+        role=AccountRole(payload.role.lower()),
         is_active=True,
         is_verified=should_bypass,
         verification_code=otp,
@@ -284,7 +285,7 @@ async def register(
         create_notification(
             db=db,
             operator_id=op_id,
-            title="Welcome to Aethel",
+            title="Welcome to Klip",
             message=f"Welcome {payload.full_name}! Your account has been created successfully.",
             priority="LOW",
             category="welcome"
@@ -490,6 +491,56 @@ async def resend_verification(
 async def logout():
     # Client-side should clear tokens
     return {"success": True, "detail": "Session terminated."}
+
+# --- 5. ACCOUNT RECOVERY ---
+
+@router.post("/recover")
+async def recover_account(
+    payload: RecoveryRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """
+    Recover account using recovery phrase and reset password.
+    This is a critical security endpoint that allows identity restoration.
+    """
+    email_lowered = payload.email.lower().strip()
+    
+    # Find user by email
+    user = db.query(User).filter(User.email == email_lowered).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Identity not found.")
+    
+    # Verify recovery phrase
+    if not user.recovery_hash or not verify_password(payload.recovery_phrase, user.recovery_hash):
+        raise HTTPException(status_code=400, detail="Invalid recovery phrase.")
+    
+    # Update password
+    user.hashed_password = hash_password(payload.new_password)
+    
+    # Invalidate all existing sessions by resetting verification code
+    # (User will need to re-login with new password)
+    user.verification_code = None
+    
+    # Create recovery notification
+    create_notification(
+        db=db,
+        operator_id=user.operator_id,
+        title="Account Recovered",
+        message="Your password has been reset using your recovery phrase. If this wasn't you, contact support immediately.",
+        priority="HIGH",
+        category="security"
+    )
+    
+    db.commit()
+    
+    # Send notification email (optional, since email may not be accessible)
+    # background_tasks.add_task(send_welcome_email, user.email, user.full_name)
+    
+    return {
+        "success": True,
+        "detail": "Account recovered successfully. You can now login with your new password."
+    }
 
 # --- 5. SECURITY PROTOCOLS ---
 

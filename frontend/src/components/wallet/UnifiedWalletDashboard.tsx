@@ -44,7 +44,7 @@ const authenticatedFetch = async (endpoint: string, options: RequestInit = {}) =
     
     if (response.status === 401 && typeof window !== 'undefined') {
       localStorage.removeItem('auth_token');
-      localStorage.removeItem('geon_user');
+      localStorage.removeItem('klip_user');
       window.location.href = '/auth/login?reason=expired';
     }
     
@@ -101,7 +101,7 @@ interface WalletBalance {
 }
 
 // Professional Logo Component
-const GeonLogo = () => (
+const KlipLogo = () => (
   <div className="relative flex items-center justify-center">
     <div className="relative w-10 h-10">
       <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl rotate-6 shadow-lg" />
@@ -135,7 +135,7 @@ export default function UnifiedWalletDashboard() {
     setMounted(true);
     const fetchUser = async () => {
         try {
-            const savedUser = localStorage.getItem('geon_user');
+            const savedUser = localStorage.getItem('klip_user');
             if (savedUser) {
                 const parsed = JSON.parse(savedUser);
                 setIdentity({
@@ -190,7 +190,7 @@ export default function UnifiedWalletDashboard() {
         {/* Navigation Header - Matching other pages */}
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <GeonLogo />
+            <KlipLogo />
             <div>
               <h1 className="text-xl font-black tracking-tight text-slate-900">Financial Hub</h1>
               <p className="text-xs text-slate-400">Secure payment gateway integration</p>

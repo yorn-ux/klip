@@ -75,6 +75,7 @@ async def get_wallet_balance(current_user: dict = Depends(get_current_user), db:
         "balance_usdt": float(wallet.usdt_balance),
         "pending_kes": float(pending_kes),
         "pending_usdt": float(pending_usdt),
+        "gateway_balance": float(wallet.kes_balance),  # For frontend compatibility - represents available balance
         "is_locked": wallet.is_locked,
         "last_sync": datetime.utcnow().isoformat()
     }
@@ -559,7 +560,7 @@ async def withdraw_paypal(
             json={
                 "sender_batch_header": {
                     "sender_batch_id": reference,
-                    "email_subject": "You have received a withdrawal from Geon PayGuard",
+                    "email_subject": "You have received a withdrawal from Klip",
                     "email_message": f"Your withdrawal of {amount} {currency} has been processed."
                 },
                 "items": [{

@@ -14,8 +14,8 @@ export const SessionWatcher = () => {
         pathname?.startsWith('/business') || 
         pathname?.startsWith('/admin');
 
-      const sessionData = sessionStorage.getItem('geon_session');
-      const hasToken = document.cookie.includes('geon_token=');
+      const sessionData = sessionStorage.getItem('klip_session');
+      const hasToken = document.cookie.includes('klip_token=');
 
       // 1. If in a protected route but session is missing, go to login
       if (isProtectedRoute && !sessionData) {
@@ -25,7 +25,7 @@ export const SessionWatcher = () => {
 
       // 2. If token is deleted manually, kill session and go to login
       if (isProtectedRoute && !hasToken) {
-        sessionStorage.removeItem('geon_session');
+           sessionStorage.removeItem('klip_session');
         window.location.href = '/auth/login';
         return;
       }
@@ -43,7 +43,7 @@ export const SessionWatcher = () => {
           }
         } catch (e) {
           console.error("Session parse error", e);
-          sessionStorage.removeItem('geon_session');
+        sessionStorage.removeItem('klip_session');
         }
       }
     };

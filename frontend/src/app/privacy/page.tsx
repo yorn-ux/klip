@@ -27,9 +27,9 @@ export default function PrivacyPage() {
               </div>
               <h2 className="text-xl font-bold text-gray-900">Your Privacy Matters</h2>
             </div>
-            <p className="text-gray-600 leading-relaxed">
-              At Aethel PayGuard, we take your privacy seriously. This policy explains how we collect, use, and protect your personal information when you use our platform.
-            </p>
+             <p className="text-gray-600 leading-relaxed">
+               At Klip, we take your privacy seriously. This policy explains how we collect, use, and protect your personal information when you use our platform.
+             </p>
           </div>
 
           {/* Quick Summary */}
@@ -139,18 +139,18 @@ export default function PrivacyPage() {
           </div>
 
           {/* Contact Information */}
-          <div className="mt-12 pt-8 border-t border-gray-100">
-            <h3 className="font-semibold text-gray-900 mb-3">Questions about your privacy?</h3>
-            <p className="text-gray-600 mb-4">
-              If you have any questions or concerns about this privacy policy, please contact us:
-            </p>
-            <div className="bg-gray-50 rounded-xl p-4">
-              <p className="text-sm text-gray-600">
-                <span className="font-medium">Email:</span> privacy@geon.com<br />
-                <span className="font-medium">Response time:</span> Within 48 hours
-              </p>
-            </div>
-          </div>
+            <div className="mt-12 pt-8 border-t border-gray-100">
+             <h3 className="font-semibold text-gray-900 mb-3">Questions about your privacy?</h3>
+             <p className="text-gray-600 mb-4">
+               If you have any questions or concerns about this privacy policy, please contact us:
+             </p>
+             <div className="bg-gray-50 rounded-xl p-4">
+               <p className="text-sm text-gray-600">
+                 <span className="font-medium">Email:</span> privacy@klip.com<br />
+                 <span className="font-medium">Response time:</span> Within 48 hours
+               </p>
+             </div>
+           </div>
         </div>
       </main>
     </div>

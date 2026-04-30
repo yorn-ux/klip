@@ -96,11 +96,11 @@ export default function InfluencerSettings({ data: initialData }: { data: any })
       if (response.ok) {
         const data = await response.json();
         // Update local storage with new avatar
-        const storedUser = localStorage.getItem('geon_user');
+        const storedUser = localStorage.getItem('klip_user');
         if (storedUser) {
           const parsed = JSON.parse(storedUser);
           parsed.avatar_url = data.url;
-          localStorage.setItem('geon_user', JSON.stringify(parsed));
+          localStorage.setItem('klip_user', JSON.stringify(parsed));
         }
         // Refresh the page to show new avatar
         window.location.reload();
@@ -134,8 +134,8 @@ export default function InfluencerSettings({ data: initialData }: { data: any })
         const data = await response.json();
         // Clear local storage and redirect to locked page with the token
         localStorage.removeItem('auth_token');
-        localStorage.removeItem('geon_user');
-        document.cookie = 'geon_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+        localStorage.removeItem('klip_user');
+        document.cookie = 'klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
         document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
         
         // Redirect to locked page with the lock token
@@ -201,7 +201,7 @@ export default function InfluencerSettings({ data: initialData }: { data: any })
 
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
-    localStorage.removeItem('geon_user');
+    localStorage.removeItem('klip_user');
     router.push('/auth/login');
   };
 

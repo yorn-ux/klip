@@ -92,7 +92,7 @@ async def send_security_alert(
                 base_url = os.getenv("APP_URL", "")
                 if not base_url:
                     # Last resort fallback - this should be set in Render dashboard
-                    base_url = "https://geonpayguard.onrender.com"
+                    base_url = "https://klip.onrender.com"
             else:
                 base_url = "http://localhost:8000"
         
@@ -118,7 +118,7 @@ async def send_security_alert(
         print(f"Error sending security alert: {e}")
         return False
 
-# --- AETHEL IDENTITY GENERATION ---
+# --- KLIP IDENTITY GENERATION ---
 def generate_recovery_phrase() -> str:
     WORD_POOL = [
         "enclave", "shield", "vault", "matrix", "secure", "proxy", "guard", "protocol",

@@ -5,7 +5,7 @@ import os
 def fix_relationships():
     """Drop and recreate tables with correct relationships"""
     
-    db_path = 'geon.db'
+    db_path = 'klip.db'
     
     if os.path.exists(db_path):
         print(f"🗑️  Deleting existing database: {db_path}")

@@ -95,7 +95,7 @@ export default function OperatorLedger() {
       return null;
     };
     
-    return getCookie('geon_token');
+    return getCookie('klip_token');
   }, []);
 
   // EXACT same headers function as Admin Dashboard
@@ -108,7 +108,7 @@ export default function OperatorLedger() {
   const checkAdminAccess = useCallback(() => {
     if (typeof window === 'undefined') return false;
     
-    const storedUser = localStorage.getItem('geon_user');
+    const storedUser = localStorage.getItem('klip_user');
     if (!storedUser) return false;
     
     try {

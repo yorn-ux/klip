@@ -12,13 +12,13 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     
     # ========== DATABASE ==========
-    DATABASE_URL: str = "sqlite:///./geon.db"
+    DATABASE_URL: str = "sqlite:///./klip.db"
     
     # ========== EMAIL SERVICE (RESEND ONLY) ==========
     # Resend.com configuration
     RESEND_API_KEY: Optional[SecretStr] = None
     RESEND_FROM_EMAIL: str = "onboarding@resend.dev"
-    RESEND_FROM_NAME: str = "Geon PayGuard"
+    RESEND_FROM_NAME: str = "Klip Security"
     
     # ========== GOOGLE OAUTH ==========
     GOOGLE_CLIENT_ID: Optional[str] = None
@@ -36,9 +36,9 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
     
     # ========== APP CONFIGURATION ==========
-    APP_NAME: str = "Geon PayGuard"
-    APP_URL: str = "https://geonpayguard.vercel.app"
-    SUPPORT_EMAIL: str = "support@geon.io"
+    APP_NAME: str = "Klip"
+    APP_URL: str = "https://klip.vercel.app"
+    SUPPORT_EMAIL: str = "support@klip.io"
     VERSION: str = "1.5.0"
     
     # ========== VERIFICATION ==========
@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     RESEND_COOLDOWN_MINUTES: int = 1
     
     # ========== CORS ==========
-    CORS_ALLOWED_ORIGINS: Any = "http://localhost:3000,https://geonpayguard.vercel.app"
+    CORS_ALLOWED_ORIGINS: Any = "http://localhost:3000,https://klip.vercel.app"
     
     @field_validator('CORS_ALLOWED_ORIGINS', mode='after')
     @classmethod
@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     
     # ========== SECURITY ==========
     SECRET_KEY: str = "your-secret-key-change-in-production"
-    ADMIN_SECRET: str = "geon-admin-secret-change-in-production"
+    ADMIN_SECRET: str = "klip-admin-secret-change-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     

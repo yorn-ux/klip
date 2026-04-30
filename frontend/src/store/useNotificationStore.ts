@@ -89,7 +89,7 @@ const getToken = (): string | null => {
   try {
     const cookie = document.cookie
       .split('; ')
-      .find(row => row.startsWith('geon_token='));
+      .find(row => row.startsWith('klip_token='));
     
     if (cookie) {
       const token = cookie.split('=')[1];
@@ -487,7 +487,7 @@ export const useNotificationStore = create<NotificationState>()(
       };
     },
     {
-      name: 'geon-notification-storage',
+      name: 'klip-notification-storage',
       partialize: (state) => ({
         userNotifications: state.userNotifications,
       }),

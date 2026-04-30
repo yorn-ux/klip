@@ -39,7 +39,7 @@ export default function ApiRegistry() {
       const parts = value.split(`; ${name}=`);
       if (parts.length === 2) return parts.pop()?.split(';').shift();
     };
-    return getCookie('geon_token') || localStorage.getItem('auth_token');
+    return getCookie('klip_token') || localStorage.getItem('auth_token');
   }, []);
 
   // Check authentication on mount

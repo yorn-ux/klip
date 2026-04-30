@@ -84,12 +84,12 @@ export default function SupportComponent() {
       if (parts.length === 2) return parts.pop()?.split(';').shift();
     };
     
-    return getCookie('geon_token') || localStorage.getItem('auth_token');
+    return getCookie('klip_token') || localStorage.getItem('auth_token');
   };
 
   const getUserInfo = () => {
     if (typeof document === 'undefined') return null;
-    const storedUser = localStorage.getItem('geon_user');
+    const storedUser = localStorage.getItem('klip_user');
     if (storedUser) {
       try {
         return JSON.parse(storedUser);

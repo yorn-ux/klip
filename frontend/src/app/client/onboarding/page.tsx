@@ -63,7 +63,7 @@ export default function OnboardingKYC() {
 
   useEffect(() => {
     setMounted(true);
-    const storedUser = localStorage.getItem('geon_user');
+    const storedUser = localStorage.getItem('klip_user');
     if (storedUser) {
       try {
         const userData = JSON.parse(storedUser);
@@ -139,11 +139,11 @@ export default function OnboardingKYC() {
       setKycStep(4);
       
       // Optionally update stored user data
-      const storedUser = localStorage.getItem('geon_user');
+      const storedUser = localStorage.getItem('klip_user');
       if (storedUser) {
         const userData = JSON.parse(storedUser);
         userData.kyc_status = data.kyc_status || 'UNDER_REVIEW';
-        localStorage.setItem('geon_user', JSON.stringify(userData));
+        localStorage.setItem('klip_user', JSON.stringify(userData));
       }
       
     } catch (error: any) {

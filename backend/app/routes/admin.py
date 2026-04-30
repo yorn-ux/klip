@@ -20,7 +20,7 @@ except ImportError:
     logging.warning("psutil not installed. System monitoring endpoints will return zeros.")
 
 from app.models.settings import PlatformConfig, BroadcastMessage, AuditLog, UserSettings
-from app.models.user import User
+from app.models.user import User, AccountRole
 from app.database import get_db
 from app.routes.auth import get_current_user
 
@@ -1761,8 +1761,11 @@ async def update_user_role(
         if new_role.lower() not in valid_roles:
             raise HTTPException(status_code=400, detail=f"Invalid role: {new_role}. Valid roles: {valid_roles}")
         
-        # Convert to uppercase for database enum
-        user.role = new_role.upper()
+        # Convert to enum member using value lookup (lowercase)
+        try:
+            user.role = AccountRole(new_role.lower())
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid role: {new_role}. Valid roles: influencer, business, admin, operator")
         
         # Create audit log
         audit_log = AuditLog(
@@ -2176,7 +2179,7 @@ async def get_admin_settings(
         
         return {
             "platform": {
-                "name": "Aethel PayGuard",
+                "name": "Klip",
                 "version": "1.0.0",
                 "environment": os.getenv("ENVIRONMENT", "production"),
                 "maintenance_mode": config.freeze_website if config else False,
@@ -2200,7 +2203,7 @@ async def get_admin_settings(
         logging.error(f"Failed to fetch admin settings: {str(e)}")
         return {
             "platform": {
-                "name": "Aethel PayGuard",
+                "name": "Klip",
                 "version": "1.0.0",
                 "environment": os.getenv("ENVIRONMENT", "production"),
                 "maintenance_mode": False

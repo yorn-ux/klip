@@ -40,54 +40,54 @@ export default function SettingsHub() {
     return null;
   };
 
-  useEffect(() => {
-    async function syncAethelSovereign() {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const token = localStorage.getItem('auth_token') || getCookie('geon_token');
-        const storedUser = localStorage.getItem('geon_user');
+   useEffect(() => {
+     async function syncKlipSovereign() {
+       setLoading(true);
+       setError(null);
+       
+       try {
+         const token = localStorage.getItem('auth_token') || getCookie('klip_token');
+         const storedUser = localStorage.getItem('klip_user');
 
-        if (!token || !storedUser) {
-          throw new Error("Session expired. Please sign in again.");
-        }
+         if (!token || !storedUser) {
+           throw new Error("Session expired. Please sign in again.");
+         }
 
-        const parsedUser = JSON.parse(storedUser);
-        
-        let userRole: 'influencer' | 'business' | 'admin' = 'influencer';
-        const raw = (parsedUser.role || '').toLowerCase();
-        if (parsedUser.is_admin || raw === 'admin') userRole = 'admin';
-        else if (['business', 'operator', 'brand', 'enterprise'].includes(raw)) userRole = 'business';
+         const parsedUser = JSON.parse(storedUser);
+         
+         let userRole: 'influencer' | 'business' | 'admin' = 'influencer';
+         const raw = (parsedUser.role || '').toLowerCase();
+         if (parsedUser.is_admin || raw === 'admin') userRole = 'admin';
+         else if (['business', 'operator', 'brand', 'enterprise'].includes(raw)) userRole = 'business';
 
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        const res = await fetch(`${API_URL}/api/v1/settings/sync`, {
-          headers: { 
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+         const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+         const res = await fetch(`${API_URL}/api/v1/settings/sync`, {
+           headers: { 
+             'Authorization': `Bearer ${token}`,
+             'Content-Type': 'application/json'
+           }
+         });
 
-        if (res.status === 401) throw new Error("Unauthorized Access");
-        if (!res.ok) throw new Error("Vault synchronization failed");
+         if (res.status === 401) throw new Error("Unauthorized Access");
+         if (!res.ok) throw new Error("Vault synchronization failed");
 
-        const json = await res.json();
-        
-        setRole(userRole);
-        setData(json.data);
-      } catch (e: any) {
-        console.error("Sync Error:", e);
-        setError(e.message || "Failed to Fetch");
-      } finally {
-        setTimeout(() => setLoading(false), 800);
-      }
-    }
-    
-    syncAethelSovereign();
-  }, []);
+         const json = await res.json();
+         
+         setRole(userRole);
+         setData(json.data);
+       } catch (e: any) {
+         console.error("Sync Error:", e);
+         setError(e.message || "Failed to Fetch");
+       } finally {
+         setTimeout(() => setLoading(false), 800);
+       }
+     }
+     
+     syncKlipSovereign();
+   }, []);
 
-  // Professional Logo Component
-  const GeonLogo = () => (
+   // Professional Logo Component
+   const KlipLogo = () => (
     <div className="relative flex items-center justify-center">
       <div className="relative w-10 h-10">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl rotate-6 shadow-lg" />
@@ -253,7 +253,7 @@ export default function SettingsHub() {
         {/* Navigation Header - Matching Login/Registration */}
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <GeonLogo />
+             <KlipLogo />
             <div>
               <h1 className="text-xl font-black tracking-tight text-slate-900">Settings</h1>
               <p className="text-xs text-slate-400">Manage your workspace preferences</p>
@@ -381,9 +381,9 @@ export default function SettingsHub() {
             </div>
           </div>
           
-          <div className="text-[7px] font-mono text-slate-300">
-            <span className="text-amber-500">●</span> GeonPayGuard • Sovereign Protocol
-          </div>
+           <div className="text-[7px] font-mono text-slate-300">
+             <span className="text-amber-500">●</span> Klip • Sovereign Protocol
+           </div>
         </div>
       </div>
 

@@ -70,7 +70,7 @@ interface AdminQueue {
 }
 
 // Professional Logo Component
-const GeonLogo = () => (
+const KlipLogo = () => (
   <div className="relative flex items-center justify-center">
     <div className="relative w-8 h-8">
       <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl rotate-6 shadow-lg" />
@@ -121,7 +121,7 @@ export default function GlobalResolutionCenter() {
       return null;
     };
     
-    return getCookie('geon_token');
+    return getCookie('klip_token');
   }, []);
 
   // Standardized headers function
@@ -139,9 +139,9 @@ export default function GlobalResolutionCenter() {
   // Clear auth data and redirect to login
   const handleAuthError = useCallback(() => {
     localStorage.removeItem('auth_token');
-    localStorage.removeItem('geon_user');
+    localStorage.removeItem('klip_user');
     localStorage.removeItem('login_timestamp');
-    document.cookie = 'geon_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+    document.cookie = 'klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
     document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
     router.push('/auth/login?reason=expired');
   }, [router]);
@@ -151,7 +151,7 @@ export default function GlobalResolutionCenter() {
     setMounted(true);
     
     const loadUser = () => {
-      const storedUser = localStorage.getItem('geon_user');
+      const storedUser = localStorage.getItem('klip_user');
       const token = getToken();
       const loginTimestamp = localStorage.getItem('login_timestamp');
       
@@ -330,7 +330,7 @@ export default function GlobalResolutionCenter() {
             </button>
             
             <div className="flex items-center gap-3">
-              <GeonLogo />
+              <KlipLogo />
               <div>
                 <h1 className="text-sm font-black tracking-tight text-slate-900">
                   Resolution<span className="text-amber-600">.Hub</span>

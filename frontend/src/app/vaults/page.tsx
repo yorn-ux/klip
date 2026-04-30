@@ -101,7 +101,7 @@ export default function UnifiedVaultPage() {
   // ==================== IDENTITY & AUTH SETUP ====================
   useEffect(() => {
     setMounted(true);
-    const savedUser = localStorage.getItem('geon_user');
+    const savedUser = localStorage.getItem('klip_user');
     if (savedUser) {
       try {
         const user = JSON.parse(savedUser);

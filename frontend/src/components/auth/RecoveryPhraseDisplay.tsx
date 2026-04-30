@@ -15,7 +15,7 @@ interface RecoveryProps {
 
 export function RecoveryPhraseDisplay({ phrase, operatorId, onComplete }: RecoveryProps) {
   const [copied, setCopied] = useState(false);
-  const [, setDownloaded] = useState(false);
+  const [, _setDownloaded] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [step, setStep] = useState<'view' | 'verify'>('view');
   const [verificationWords, setVerificationWords] = useState<number[]>([]);
@@ -62,18 +62,17 @@ export function RecoveryPhraseDisplay({ phrase, operatorId, onComplete }: Recove
     window.print();
   };
 
-  const handleDownload = () => {
-    if (!phrase) return;
-    const element = document.createElement('a');
-    const content = `AETHEL PROTOCOL - RECOVERY MASTER KEY\nOPERATOR ID: ${operatorId}\nDATE: ${new Date().toLocaleDateString()}\n\nRECOVERY PHRASE:\n${phrase}\n\nWARNING: Store this file offline. Delete after printing.`;
-    const file = new Blob([content], { type: 'text/plain' });
-    element.href = URL.createObjectURL(file);
-    element.download = `geon-keys-${operatorId.slice(0, 6)}.txt`;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-    setDownloaded(true);
-  };
+   const handleDownload = () => {
+     if (!phrase) return;
+     const element = document.createElement('a');
+     const content = `KLIP RECOVERY KEY\nOPERATOR ID: ${operatorId}\nDATE: ${new Date().toLocaleDateString()}\n\nRECOVERY PHRASE:\n${phrase}\n\nWARNING: Store this file offline. Delete after printing.`;
+     const file = new Blob([content], { type: 'text/plain' });
+     element.href = URL.createObjectURL(file);
+     element.download = `klip-keys-${operatorId.slice(0, 6)}.txt`;
+     document.body.appendChild(element);
+     element.click();
+     document.body.removeChild(element);
+   };
 
   const handleVerify = () => {
     const targetIndex = verificationWords[verificationStep];
@@ -143,7 +142,7 @@ export function RecoveryPhraseDisplay({ phrase, operatorId, onComplete }: Recove
 
       {/* Print-Only Header */}
       <div className="hidden print:block text-center border-b pb-8 mb-8">
-        <h1 className="text-2xl font-bold uppercase tracking-widest">Aethel Protocol Recovery Key</h1>
+         <h1 className="text-2xl font-bold uppercase tracking-widest">Klip Recovery Key</h1>
         <p className="text-sm font-mono mt-2">ID: {operatorId}</p>
       </div>
 

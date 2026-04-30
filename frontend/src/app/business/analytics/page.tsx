@@ -36,7 +36,7 @@ export default function AnalyticsHub() {
       const parts = value.split(`; ${name}=`);
       if (parts.length === 2) return parts.pop()?.split(';').shift();
     };
-    return getCookie('geon_token') || localStorage.getItem('auth_token');
+    return getCookie('klip_token') || localStorage.getItem('auth_token');
   };
 
   const fetchMetrics = useCallback(async () => {
@@ -89,7 +89,7 @@ export default function AnalyticsHub() {
       const dateStr = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`;
       
       // Create CSV content
-      let csvContent = "Aethel Analytics Report\n";
+       let csvContent = "Klip Analytics Report\n";
       csvContent += `Generated: ${date.toLocaleString()}\n`;
       csvContent += `Period: ${activeTab}\n\n`;
       
@@ -122,7 +122,7 @@ export default function AnalyticsHub() {
       const url = URL.createObjectURL(blob);
       
       link.href = url;
-      link.setAttribute('download', `geon-analytics-${dateStr}.csv`);
+      link.setAttribute('download', `klip-analytics-${dateStr}.csv`);
       document.body.appendChild(link);
       link.click();
       

@@ -89,7 +89,7 @@ const NAV_MAP: Record<UserRole, { label: string; href: string; icon: any }[]> = 
 };
 
 // Professional Logo Component - Redesigned
-const GeonLogo = () => (
+const KlipLogo = () => (
   <div className="relative flex items-center gap-3 group">
     {/* Logo Mark */}
     <div className="relative w-10 h-10">
@@ -119,13 +119,13 @@ const GeonLogo = () => (
     <div className="flex flex-col">
       <div className="flex items-baseline gap-1">
         <span className="text-xl font-black tracking-tight text-slate-900 group-hover:text-slate-700 transition-colors">
-          GEON
+          KLIP
         </span>
         <BadgeCheck size={14} className="text-emerald-500" />
       </div>
       <div className="flex items-center gap-1">
         <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-400 group-hover:text-slate-500 transition-colors">
-          PayGuard
+          Klip
         </span>
         <span className="text-[8px] font-medium text-amber-500/70 bg-amber-50 px-1.5 py-0.5 rounded-full">
           SECURE
@@ -136,7 +136,7 @@ const GeonLogo = () => (
 );
 
 // Minimal Logo for Mobile
-const GeonLogoMini = () => (
+const KlipLogoMini = () => (
   <div className="relative w-9 h-9">
     <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl rotate-6 shadow-md" />
     <div className="absolute inset-[2px] bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg rotate-6" />
@@ -219,12 +219,12 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     }
     
     if (domain) {
-      document.cookie = `geon_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=${domain};`;
+      document.cookie = `klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=${domain};`;
       document.cookie = `user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=${domain};`;
       document.cookie = `setup_complete=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=${domain};`;
     }
     
-    document.cookie = "geon_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+    document.cookie = "klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
     document.cookie = "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
     document.cookie = "setup_complete=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
     
@@ -257,8 +257,8 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         return null;
       };
       
-      const authToken = localStorage.getItem('auth_token') || getCookie('geon_token');
-      const stored = localStorage.getItem('geon_user');
+      const authToken = localStorage.getItem('auth_token') || getCookie('klip_token');
+      const stored = localStorage.getItem('klip_user');
 
       if (!authToken || !stored) {
         router.push('/auth/login?t=' + Date.now());
@@ -290,7 +290,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.error('Failed to parse user data:', error);
-        localStorage.removeItem('geon_user');
+        localStorage.removeItem('klip_user');
         router.push('/auth/login?t=' + Date.now());
       } finally {
         setIsInitializing(false);
@@ -316,7 +316,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           
           {/* Loading Text */}
           <div className="text-center space-y-3">
-            <p className="text-sm font-medium text-slate-900">GeonPayGuard</p>
+            <p className="text-sm font-medium text-slate-900">Klip</p>
             <div className="flex items-center justify-center gap-1">
               <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
               <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -376,10 +376,10 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             </button>
 
             <Link href="/" className="hidden sm:block">
-              <GeonLogo />
+              <KlipLogo />
             </Link>
             <Link href="/" className="sm:hidden">
-              <GeonLogoMini />
+              <KlipLogoMini />
             </Link>
           </div>
 
@@ -577,10 +577,10 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 Privacy
               </Link>
             </div>
-            <p className="text-xs text-slate-400">
-              © {new Date().getFullYear()} GeonPayGuard. All rights reserved. 
-              <span className="hidden sm:inline"> Secure payment vaults for creators and brands.</span>
-            </p>
+             <p className="text-xs text-slate-400">
+               © {new Date().getFullYear()} Klip. All rights reserved. 
+               <span className="hidden sm:inline"> Secure payment vaults for creators and brands.</span>
+             </p>
           </div>
         </div>
       </footer>

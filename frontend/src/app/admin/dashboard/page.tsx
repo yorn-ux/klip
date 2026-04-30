@@ -91,7 +91,7 @@ export default function AdminDashboard() {
       return null;
     };
     
-    return getCookie('geon_token');
+    return getCookie('klip_token');
   }, []);
 
   const getAuthHeaders = useCallback((): Record<string, string> => {
@@ -101,7 +101,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     setMounted(true);
-    const storedUser = localStorage.getItem('geon_user');
+    const storedUser = localStorage.getItem('klip_user');
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser);

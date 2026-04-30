@@ -67,7 +67,7 @@ export default function ConvertModal({ isOpen, onClose, balances, onSuccess }: C
   // Auth helper
   const getAuthToken = () => {
     return localStorage.getItem('auth_token') || 
-           document.cookie.split('; ').find(row => row.startsWith('geon_token='))?.split('=')[1];
+           document.cookie.split('; ').find(row => row.startsWith('klip_token='))?.split('=')[1];
   };
 
   const parseBalance = (val: string) => parseFloat(val.replace(/,/g, '')) || 0;

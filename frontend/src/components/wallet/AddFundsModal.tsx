@@ -33,7 +33,7 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
   const [paypalDetails, setpaypalDetails] = useState({ email: '' });
 
   // Professional Logo Component
-  const GeonLogo = () => (
+  const KlipLogo = () => (
     <div className="relative flex items-center justify-center">
       <div className="relative w-8 h-8">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl rotate-6 shadow-lg" />
@@ -94,7 +94,7 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
   // Auth helper
   const getAuthToken = () => {
     return localStorage.getItem('auth_token') || 
-           document.cookie.split('; ').find(row => row.startsWith('geon_token='))?.split('=')[1];
+           document.cookie.split('; ').find(row => row.startsWith('klip_token='))?.split('=')[1];
   };
 
   // Check transaction status with payment gateway
@@ -271,7 +271,7 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
               </button>
             )}
             <div className="flex items-center gap-2">
-              <GeonLogo />
+              <KlipLogo />
               <div>
                 <h2 className="text-base font-black text-slate-900">
                   {step === 'select' && 'Add Funds'}

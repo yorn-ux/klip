@@ -95,7 +95,7 @@ export default function NodeHealth() {
       return null;
     };
     
-    return getCookie('geon_token');
+    return getCookie('klip_token');
   };
 
   const getAuthHeaders = (): Record<string, string> => {
@@ -112,7 +112,7 @@ export default function NodeHealth() {
   };
 
   const checkAdminAccess = (): boolean => {
-    const storedUser = localStorage.getItem('geon_user');
+    const storedUser = localStorage.getItem('klip_user');
     if (!storedUser) return false;
     
     try {
@@ -165,8 +165,8 @@ export default function NodeHealth() {
 
       if (statusRes.status === 401 || systemInfoRes.status === 401) {
         localStorage.removeItem('auth_token');
-        localStorage.removeItem('geon_user');
-        document.cookie = 'geon_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+        localStorage.removeItem('klip_user');
+        document.cookie = 'klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
         router.push('/auth/login');
         return;
       }

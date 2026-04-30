@@ -84,7 +84,7 @@ export default function EnhancedAuditLedger() {
       return null;
     };
     
-    return getCookie('geon_token');
+    return getCookie('klip_token');
   }, []);
 
   const getAuthHeaders = useCallback((): Record<string, string> => {
@@ -101,7 +101,7 @@ export default function EnhancedAuditLedger() {
   }, [router, getToken]);
 
   const checkAdminAccess = useCallback((): boolean => {
-    const storedUser = localStorage.getItem('geon_user');
+    const storedUser = localStorage.getItem('klip_user');
     if (!storedUser) return false;
     
     try {
@@ -176,7 +176,7 @@ export default function EnhancedAuditLedger() {
 
       if (response.status === 401) {
         localStorage.removeItem('auth_token');
-        localStorage.removeItem('geon_user');
+        localStorage.removeItem('klip_user');
         router.push('/auth/login');
         return;
       }

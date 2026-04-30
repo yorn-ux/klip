@@ -26,7 +26,7 @@ export default function InfluencerDashboard() {
       const parts = value.split(`; ${name}=`);
       if (parts.length === 2) return parts.pop()?.split(';').shift();
     };
-    return getCookie('geon_token');
+    return getCookie('klip_token');
   }, []);
 
   const fetchData = useCallback(async (opId: string) => {
@@ -64,7 +64,7 @@ export default function InfluencerDashboard() {
 
   useEffect(() => {
     setMounted(true);
-    const storedUser = localStorage.getItem('geon_user');
+    const storedUser = localStorage.getItem('klip_user');
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser);
@@ -100,7 +100,7 @@ export default function InfluencerDashboard() {
             <div className="w-8 h-8 bg-rose-500 rounded-lg flex items-center justify-center text-white">
               <Zap size={18} />
             </div>
-            <span className="font-semibold text-lg">Aethel</span>
+             <span className="font-semibold text-lg">Klip</span>
           </div>
           
           {/* User Menu */}
@@ -144,7 +144,7 @@ export default function InfluencerDashboard() {
         <div>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-medium text-gray-700">Active Project</h2>
-            <Link href="/client/vaults" className="text-xs text-rose-600 hover:text-rose-700">
+            <Link href="/vaults" className="text-xs text-rose-600 hover:text-rose-700">
               View all
             </Link>
           </div>
@@ -209,12 +209,12 @@ export default function InfluencerDashboard() {
                 <h3 className="font-medium text-amber-800 mb-1">Low balance</h3>
                 <p className="text-sm text-amber-700">Add funds to create new projects</p>
               </div>
-              <Link 
-                href="/client/wallet/deposit" 
-                className="text-sm text-amber-800 hover:text-amber-900 font-medium"
-              >
-                Deposit
-              </Link>
+               <Link 
+                 href="/wallet" 
+                 className="text-sm text-amber-800 hover:text-amber-900 font-medium"
+               >
+                 Deposit
+               </Link>
             </div>
           </div>
         )}

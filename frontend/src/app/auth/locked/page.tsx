@@ -9,11 +9,11 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
 // Custom Logo Component
-const GeonLogo = () => (
+const KlipLogo = () => (
   <div className="relative w-12 h-12 flex items-center justify-center mx-auto">
     <div className="absolute inset-0 border-2 border-rose-500 rounded-xl opacity-20"></div>
     <div className="absolute inset-1 border border-rose-500 rounded-lg opacity-40"></div>
-    <span className="relative text-xl font-bold text-rose-500">G</span>
+    <span className="relative text-xl font-bold text-rose-500">K</span>
     <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full"></div>
     <div className="absolute -bottom-0.5 -left-0.5 w-2 h-2 bg-emerald-500 rounded-full"></div>
   </div>
@@ -66,8 +66,8 @@ function LockAccountContent() {
         
         // Clear any auth data
         localStorage.removeItem('auth_token');
-        localStorage.removeItem('geon_user');
-        document.cookie = 'geon_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+        localStorage.removeItem('klip_user');
+        document.cookie = 'klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
         document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
       } else {
         setStatus('error');
@@ -85,14 +85,14 @@ function LockAccountContent() {
   // No token provided - show request form
   if (!token) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
-            <GeonLogo />
-            
-            <h1 className="text-2xl font-bold text-white text-center mt-6 mb-2">
-              Lock Account
-            </h1>
+       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+         <div className="w-full max-w-md">
+           <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
+             <KlipLogo />
+             
+             <h1 className="text-2xl font-bold text-white text-center mt-6 mb-2">
+               Lock Account
+             </h1>
             <p className="text-slate-400 text-center text-sm mb-8">
               To lock your account, please use the link sent to your email address.
             </p>
@@ -127,10 +127,10 @@ function LockAccountContent() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
-            <GeonLogo />
-            
-            <h1 className="text-2xl font-bold text-white text-center mt-6 mb-4">
+         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
+             <KlipLogo />
+             
+             <h1 className="text-2xl font-bold text-white text-center mt-6 mb-4">
               Locking Your Account
             </h1>
             
@@ -152,7 +152,7 @@ function LockAccountContent() {
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
-            <GeonLogo />
+            <KlipLogo />
             
             <h1 className="text-2xl font-bold text-white text-center mt-6 mb-2">
               Account Locked
@@ -200,11 +200,11 @@ function LockAccountContent() {
   // Error state
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
-          <GeonLogo />
-          
-          <h1 className="text-2xl font-bold text-white text-center mt-6 mb-2">
+       <div className="w-full max-w-md">
+         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
+           <KlipLogo />
+           
+           <h1 className="text-2xl font-bold text-white text-center mt-6 mb-2">
             Unable to Lock Account
           </h1>
           

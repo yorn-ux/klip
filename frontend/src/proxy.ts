@@ -5,7 +5,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // Get token from cookies
-  const token = request.cookies.get('geon_token')?.value;
+  const token = request.cookies.get('klip_token')?.value;
   const userRole = request.cookies.get('user_role')?.value?.toLowerCase(); 
 
   // Debug logging (remove in production)

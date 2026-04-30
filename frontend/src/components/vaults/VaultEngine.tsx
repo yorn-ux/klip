@@ -672,7 +672,7 @@ export default function VaultEngine({
             <p className="text-xs text-gray-400">Network Status</p>
             <div className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <p className="text-xs font-medium text-emerald-600">GeonPayGuard Mainnet Live</p>
+               <p className="text-xs font-medium text-emerald-600">Klip Mainnet Live</p>
             </div>
           </div>
         </div>
@@ -1477,9 +1477,9 @@ export default function VaultEngine({
                     checked={formData?.termsAccepted || false}
                     onChange={(e) => handleInputChange('termsAccepted', e.target.checked)}
                   />
-                  <label htmlFor="terms" className="text-xs text-amber-800">
-                    I have read and accept the GeonPayGuard Terms of Service
-                  </label>
+                   <label htmlFor="terms" className="text-xs text-amber-800">
+                     I have read and accept the Klip Terms of Service
+                   </label>
                 </div>
 
                 <div className="flex items-start gap-3">
@@ -1505,9 +1505,9 @@ export default function VaultEngine({
               {/* Deployment Summary */}
               <div className="bg-gray-50 rounded-lg p-4 text-xs text-gray-600">
                 <p className="font-medium mb-2">Deployment Summary:</p>
-                <ul className="space-y-1 list-disc pl-4">
-                  <li>Funds will be locked in GeonPayGuard smart contract</li>
-                  <li>Platform fee: {formatCurrency(platformFee)} (5%)</li>
+                 <ul className="space-y-1 list-disc pl-4">
+                   <li>Funds will be locked in Klip smart contract</li>
+                   <li>Platform fee: {formatCurrency(platformFee)} (5%)</li>
                   <li>Dispute window: {formData.disputeWindow} days</li>
                   <li>Estimated gas: ~0.002 ETH (varies by network)</li>
                 </ul>

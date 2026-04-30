@@ -171,7 +171,7 @@ export default function CampaignModal({ isOpen, onClose, campaign, mode = 'apply
     if (localStorageToken) return localStorageToken;
 
     const value = `; ${document.cookie}`;
-    const parts = value.split(`; geon_token=`);
+    const parts = value.split(`; klip_token=`);
     if (parts.length === 2) return parts.pop()?.split(';').shift();
     return null;
   };
@@ -351,7 +351,7 @@ export default function CampaignModal({ isOpen, onClose, campaign, mode = 'apply
     setSubmitting(true);
 
     try {
-      const storedUser = JSON.parse(localStorage.getItem('geon_user') || '{}');
+      const storedUser = JSON.parse(localStorage.getItem('klip_user') || '{}');
       
       const formData = new FormData();
       
@@ -424,7 +424,7 @@ export default function CampaignModal({ isOpen, onClose, campaign, mode = 'apply
     setSubmitting(true);
 
     try {
-      const storedUser = JSON.parse(localStorage.getItem('geon_user') || '{}');
+      const storedUser = JSON.parse(localStorage.getItem('klip_user') || '{}');
       
       const formData = new FormData();
       
@@ -1059,9 +1059,9 @@ export default function CampaignModal({ isOpen, onClose, campaign, mode = 'apply
           <div className="w-6 h-6 bg-emerald-50 rounded-lg flex items-center justify-center shrink-0">
             <Shield size={14} className="text-emerald-600" />
           </div>
-          <p className="text-xs text-gray-500">
-            <span className="font-medium text-gray-700">Vault protected:</span> Funds are secured by GeonPayGuard and released automatically upon brand approval. Your application is encrypted and secure.
-          </p>
+           <p className="text-xs text-gray-500">
+             <span className="font-medium text-gray-700">Vault protected:</span> Funds are secured by Klip and released automatically upon brand approval. Your application is encrypted and secure.
+           </p>
         </div>
       </div>
     </div>

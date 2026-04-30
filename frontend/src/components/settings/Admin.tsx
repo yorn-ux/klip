@@ -91,7 +91,7 @@ export default function AdminSettings() {
       return null;
     };
     
-    return getCookie('geon_token');
+    return getCookie('klip_token');
   };
 
   // Helper function to get auth headers
@@ -139,7 +139,7 @@ export default function AdminSettings() {
 
       if (platformRes.status === 401 || riskRes.status === 401 || broadcastsRes.status === 401) {
         localStorage.removeItem('auth_token');
-        document.cookie = 'geon_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+        document.cookie = 'klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
         router.push('/auth/login');
         throw new Error('Session expired. Please login again.');
       }

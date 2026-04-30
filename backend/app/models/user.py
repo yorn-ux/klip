@@ -8,6 +8,7 @@ class AccountRole(str, enum.Enum):
     INFLUENCER = "influencer"
     BUSINESS = "business"
     ADMIN = "admin"
+    OPERATOR = "operator"
 
 class User(Base):
     __tablename__ = "users"

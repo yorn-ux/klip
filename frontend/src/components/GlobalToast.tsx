@@ -173,9 +173,9 @@ export default function GlobalToast() {
           <div className={`px-4 py-1.5 border-t ${style.border} bg-white/30 flex items-center justify-between`}>
             <div className="flex items-center gap-2">
               <Zap size={10} className={style.icon} />
-              <span className={`text-[8px] font-medium uppercase tracking-wider ${style.text} opacity-60`}>
-                GeonPayGuard
-              </span>
+               <span className={`text-[8px] font-medium uppercase tracking-wider ${style.text} opacity-60`}>
+                 Klip
+               </span>
             </div>
             <span className={`text-[8px] ${style.text} opacity-40`}>
               {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}

@@ -48,13 +48,13 @@ export default function BusinessDashboard() {
       const parts = value.split(`; ${name}=`);
       if (parts.length === 2) return parts.pop()?.split(';').shift();
     };
-    return getCookie('geon_token') || localStorage.getItem('auth_token');
+    return getCookie('klip_token') || localStorage.getItem('auth_token');
   }, []);
 
   // Get user identity from localStorage
   useEffect(() => {
     setMounted(true);
-    const storedUser = localStorage.getItem('geon_user');
+    const storedUser = localStorage.getItem('klip_user');
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser);
@@ -196,9 +196,9 @@ export default function BusinessDashboard() {
               </span>
             </div>
             <div className="mt-3 pt-3 border-t border-gray-100">
-              <Link href="/client/wallet/deposit" className="text-xs text-rose-600 hover:text-rose-700 font-medium flex items-center gap-1">
+               <Link href="/wallet" className="text-xs text-rose-600 hover:text-rose-700 font-medium">
                 Add funds <ArrowUpRight size={12} />
-              </Link>
+               </Link>
             </div>
           </div>
 
@@ -231,9 +231,9 @@ export default function BusinessDashboard() {
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-medium text-gray-700">Active Projects</h2>
-              <Link href="/client/vaults" className="text-xs text-rose-600 hover:text-rose-700">
-                View all
-              </Link>
+               <Link href="/vaults" className="text-xs text-rose-600 hover:text-rose-700">
+                 View all
+               </Link>
             </div>
 
             {loading ? (

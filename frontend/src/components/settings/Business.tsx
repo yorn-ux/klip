@@ -65,11 +65,11 @@ export default function BusinessSettings({ data }: any) {
 
       if (response.ok) {
         const data = await response.json();
-        const storedUser = localStorage.getItem('geon_user');
+        const storedUser = localStorage.getItem('klip_user');
         if (storedUser) {
           const parsed = JSON.parse(storedUser);
           parsed.avatar_url = data.url;
-          localStorage.setItem('geon_user', JSON.stringify(parsed));
+          localStorage.setItem('klip_user', JSON.stringify(parsed));
         }
         window.location.reload();
       } else {
@@ -100,8 +100,8 @@ export default function BusinessSettings({ data }: any) {
       if (response.ok) {
         const data = await response.json();
         localStorage.removeItem('auth_token');
-        localStorage.removeItem('geon_user');
-        document.cookie = 'geon_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+        localStorage.removeItem('klip_user');
+        document.cookie = 'klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
         document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
         window.location.href = `/auth/locked?token=${data.lock_token}`;
       } else {
@@ -117,7 +117,7 @@ export default function BusinessSettings({ data }: any) {
 
   // Get user identity
   useEffect(() => {
-    const storedUser = localStorage.getItem('geon_user');
+    const storedUser = localStorage.getItem('klip_user');
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser);
@@ -135,8 +135,8 @@ export default function BusinessSettings({ data }: any) {
 
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
-    localStorage.removeItem('geon_user');
-    document.cookie = "geon_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+    localStorage.removeItem('klip_user');
+    document.cookie = "klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
     router.push('/auth/login');
   };
 

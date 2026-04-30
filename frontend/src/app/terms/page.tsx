@@ -29,7 +29,7 @@ export default function TermsPage() {
               <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
                 <FileText className="text-blue-600" size={20} />
               </div>
-              <h2 className="text-xl font-bold text-gray-900">Welcome to Aethel PayGuard</h2>
+               <h2 className="text-xl font-bold text-gray-900">Welcome to Klip</h2>
             </div>
             <p className="text-gray-600 leading-relaxed">
               By signing up or using our services, you agree to these terms. Please read them carefully. 
@@ -79,7 +79,7 @@ export default function TermsPage() {
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">🇰🇪 Kenya Operations</h3>
                 <p className="text-sm text-gray-600 mb-3">
-                  Aethel PayGuard operates in compliance with Kenyan law. Here's what you need to know:
+                   <p>Klip operates in compliance with Kenyan law. Here's what you need to know:</p>
                 </p>
                 <ul className="space-y-2 text-sm text-gray-600">
                   <li className="flex items-start gap-2">
@@ -111,7 +111,7 @@ export default function TermsPage() {
               title="Who can use our services"
               content={
                 <div className="space-y-3 text-gray-600">
-                  <p>You can use Aethel PayGuard if:</p>
+                   <p>You can use Klip if:</p>
                   <ul className="list-disc pl-5 space-y-1">
                     <li>You are at least 18 years old (as required by Kenyan law)</li>
                     <li>You have the legal right to enter into agreements</li>
@@ -284,7 +284,7 @@ export default function TermsPage() {
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-sm text-gray-500">
               <div className="flex items-center gap-1">
                 <Mail size={14} />
-                <span>legal@geon.co.ke</span>
+                <span>legal@klip.com</span>
               </div>
               <div className="flex items-center gap-1">
                 <MapPin size={14} />
@@ -294,10 +294,10 @@ export default function TermsPage() {
                 <span className="text-xs bg-gray-100 px-2 py-1 rounded">📞 +254 (0) 700 000 000</span>
               </div>
             </div>
-            <p className="text-xs text-gray-400 mt-4">
-              Aethel PayGuard is a service provided by Aethel Technologies Ltd, registered in Kenya.
-              All transactions are in KES and subject to Kenyan laws and regulations.
-            </p>
+             <p className="text-xs text-gray-400 mt-4">
+                Klip is a service provided by Klip Technologies Ltd, registered in Kenya.
+                All transactions are in KES and subject to Kenyan laws and regulations.
+              </p>
           </div>
         </div>
       </main>

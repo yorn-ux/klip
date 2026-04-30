@@ -134,7 +134,7 @@ async def lifespan(app: FastAPI):
 # Initialize FastAPI app with lifespan
 app = FastAPI(
     title="Sovereign Protocol API",
-    description="Aethel PayGuard - Sovereign Financial Protocol",
+    description="Klip - Sovereign Financial Protocol",
     version="1.0.0",
     lifespan=lifespan,
     docs_url="/docs",
@@ -145,11 +145,11 @@ app = FastAPI(
 # Get allowed origins from environment variable or use defaults
 # FIXED: Added your actual Vercel frontend URL
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "").split(",") if os.getenv("ALLOWED_ORIGINS") else [
-    "https://geonpayguard.vercel.app",  # Your Vercel frontend
+    "https://klip.vercel.app",  # Your Vercel frontend
     "http://localhost:3000",                # Local development
     "http://localhost:3001",                 # Alternative local port
-    "https://geonpayguard.com",           # Your production domain (if you have one)
-    "https://www.geonpayguard.com",       # www subdomain
+    "https://klip.com",           # Your production domain (if you have one)
+    "https://www.klip.com",       # www subdomain
 ]
 
 # Add CORS middleware with proper configuration
@@ -194,7 +194,7 @@ async def root():
     """Root endpoint with API information"""
     return {
         "success": True,
-        "service": "Aethel PayGuard API",
+        "service": "Klip API",
         "version": "1.0.0",
         "environment": os.getenv("ENVIRONMENT", "development"),
         "status": "operational",
@@ -245,7 +245,7 @@ async def health_check():
     return {
         "status": "healthy" if db_status == "healthy" else "degraded",
         "timestamp": time.time(),
-        "service": "geonpayguard-api",
+        "service": "klip-api",
         "version": "1.0.0",
         "database": {
             "status": db_status,

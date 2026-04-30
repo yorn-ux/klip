@@ -35,7 +35,7 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
   const [stats, setStats] = useState({ count: 0, total_withdrawn: 0 });
 
   // Professional Logo Component
-  const GeonLogo = () => (
+  const KlipLogo = () => (
     <div className="relative flex items-center justify-center">
       <div className="relative w-8 h-8">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl rotate-6 shadow-lg" />
@@ -51,7 +51,7 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
   // Auth helper
   const getAuthToken = () => {
     return localStorage.getItem('auth_token') || 
-           document.cookie.split('; ').find(row => row.startsWith('geon_token='))?.split('=')[1];
+           document.cookie.split('; ').find(row => row.startsWith('klip_token='))?.split('=')[1];
   };
 
 
@@ -312,7 +312,7 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
               </button>
             )}
             <div className="flex items-center gap-2">
-              <GeonLogo />
+              <KlipLogo />
               <div>
                 <h2 className="text-base font-black text-slate-900">
                   {step === 'form' ? 'Withdraw Funds' : 

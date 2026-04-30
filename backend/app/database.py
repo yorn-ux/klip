@@ -37,7 +37,7 @@ if DATABASE_URL:
     )
     logger.info("✅ Database Engine: Production (PostgreSQL)")
 else:
-    SQLALCHEMY_DATABASE_URL = "sqlite:///./geon.db"
+    SQLALCHEMY_DATABASE_URL = "sqlite:///./klip.db"
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL, 
         connect_args={"check_same_thread": False}

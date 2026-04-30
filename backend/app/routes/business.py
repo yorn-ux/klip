@@ -239,11 +239,18 @@ async def get_team(
             operator_id=member.operator_id,
             full_name=member.full_name,
             email=member.email,
-            role=member.role,
+            role=member.role.value if hasattr(member.role, 'value') else str(member.role),
             permissions=[],  # You can add permissions logic here
             is_active=member.is_active,
-            joined_at=member.created_at,
-            last_login=member.last_login
+            is_verified=member.is_verified,
+            is_suspended=getattr(member, 'is_suspended', False),
+            enrolled_by=member.enrolled_by,
+            enrolled_at=member.enrolled_at,
+            last_active=member.last_login,
+            mfa_enabled=getattr(member, 'mfa_enabled', False),
+            department=getattr(member, 'department', None),
+            phone=getattr(member, 'phone', None),
+            notes=getattr(member, 'notes', None)
         )
         for member in team_members
     ]
