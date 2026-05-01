@@ -7,7 +7,7 @@ import {
   Filter, Download, RefreshCw, Eye, EyeOff, Copy,
   CheckCircle2, AlertTriangle, 
   BarChart3, Activity, Wallet,  Calendar,
-   Award, Zap, 
+   Award, Zap,
   FileText,
   Loader2
 } from 'lucide-react';
@@ -142,10 +142,10 @@ export default function UnifiedVaultPage() {
         ...(searchTerm && { search: searchTerm })
       });
 
-      const [statsRes, vaultsRes] = await Promise.all([
-        fetch(`${API_BASE}/api/v1/vaults/stats?operator_id=${operatorId}&role=${role}`, { headers }),
-        fetch(`${API_BASE}/api/v1/vaults?${queryParams.toString()}`, { headers })
-      ]);
+        const [statsRes, vaultsRes] = await Promise.all([
+          fetch(`${API_BASE}/api/v1/vaults/stats`, { headers }),
+          fetch(`${API_BASE}/api/v1/vaults/campaigns?${queryParams.toString()}`, { headers })
+        ]);
 
       if (statsRes.ok) {
         const sData = await statsRes.json();
@@ -267,8 +267,13 @@ export default function UnifiedVaultPage() {
 
   const exportVaults = async () => {
     try {
+      // Export endpoint not yet implemented in backend
+      console.log('Export feature not yet available');
+      return;
+      
+      /*
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE}/api/vaults/export?operator_id=${operatorId}&role=${role}`, {
+      const response = await fetch(`${API_BASE}/api/v1/vaults/export?role=${role}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -283,6 +288,7 @@ export default function UnifiedVaultPage() {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
       }
+      */
     } catch (err) {
       console.error("Export failed:", err);
     }

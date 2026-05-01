@@ -1,6 +1,6 @@
 'use client';
 
-import{ useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   TrendingUp, ShieldCheck, 
   AlertCircle, ArrowUpRight, Wallet,
@@ -90,9 +90,9 @@ export default function BusinessDashboard() {
       const headers = { 'Authorization': `Bearer ${token}` };
 
       const [balRes, vaultsRes, ledgerRes] = await Promise.all([
-        fetch(`${API_URL}/api/v1/wallet/balance?operator_id=${opId}`, { headers }),
+        fetch(`${API_URL}/api/v1/wallet/balance`, { headers }),
         fetch(`${API_URL}/api/v1/vaults/latest?operator_id=${opId}&role=business`, { headers }),
-        fetch(`${API_URL}/api/v1/business/ledger?operator_id=${opId}`, { headers })
+        fetch(`${API_URL}/api/v1/business/ledger`, { headers })
       ]);
 
       if (balRes.ok) {

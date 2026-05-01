@@ -25,11 +25,6 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: Optional[SecretStr] = None
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/auth/google/callback"
     
-    # ========== GITHUB OAUTH ==========
-    GITHUB_CLIENT_ID: Optional[str] = None
-    GITHUB_CLIENT_SECRET: Optional[SecretStr] = None
-    GITHUB_REDIRECT_URI: str = "http://localhost:8000/api/auth/github/callback"
-    
     # ========== JWT CONFIG ==========
     JWT_SECRET_KEY: str = "your-jwt-secret-key-change-in-production"
     JWT_ALGORITHM: str = "HS256"
@@ -108,10 +103,6 @@ class Settings(BaseSettings):
     @property
     def is_google_oauth_enabled(self) -> bool:
         return bool(self.GOOGLE_CLIENT_ID and self.GOOGLE_CLIENT_SECRET)
-    
-    @property
-    def is_github_oauth_enabled(self) -> bool:
-        return bool(self.GITHUB_CLIENT_ID and self.GITHUB_CLIENT_SECRET)
     
     @property
     def is_production(self) -> bool:

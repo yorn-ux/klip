@@ -11,7 +11,6 @@ from starlette.config import Config
 
 from app.config import settings
 from app.models.user import User
-from app.utils.security import generate_recovery_phrase, generate_operator_id
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +18,6 @@ logger = logging.getLogger(__name__)
 config_data = {
     'GOOGLE_CLIENT_ID': settings.GOOGLE_CLIENT_ID,
     'GOOGLE_CLIENT_SECRET': settings.GOOGLE_CLIENT_SECRET,
-    'GITHUB_CLIENT_ID': settings.GITHUB_CLIENT_ID,
-    'GITHUB_CLIENT_SECRET': settings.GITHUB_CLIENT_SECRET,
 }
 config = Config(environ=config_data)
 oauth = OAuth(config)
@@ -29,13 +26,6 @@ oauth.register(
     name='google',
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     client_kwargs={'scope': 'openid email profile'},
-)
-
-oauth.register(
-    name='github',
-    authorize_url='https://github.com/login/oauth/authorize',
-    access_token_url='https://github.com/login/oauth/access_token',
-    client_kwargs={'scope': 'user:email'},
 )
 
 # --- JWT Core ---
@@ -88,14 +78,12 @@ async def handle_oauth_user(
         else:
             # Create new user via OAuth
             operator_id = generate_operator_id()
-            recovery_phrase = generate_recovery_phrase()
             
             user = User(
                 operator_id=operator_id,
                 email=normalized_email,
                 full_name=name,
-                hashed_password=f"oauth_{provider}", 
-                recovery_phrase=recovery_phrase,
+                hashed_password=f"oauth_{provider}",
                 is_active=True,
                 is_admin=False, # Default to False for security
                 email_verified=True,
@@ -149,25 +137,3 @@ async def get_google_user_info(access_token: str) -> Dict[str, Any]:
         if response.status_code != 200:
             raise HTTPException(status_code=400, detail="Google authentication failed")
         return response.json()
-
-async def get_github_user_info(access_token: str) -> Dict[str, Any]:
-    async with httpx.AsyncClient() as client:
-        headers = {"Authorization": f"Bearer {access_token}", "Accept": "application/vnd.github.v3+json"}
-        
-        # Profile
-        res = await client.get("https://api.github.com/user", headers=headers)
-        if res.status_code != 200:
-            raise HTTPException(status_code=400, detail="GitHub authentication failed")
-        profile = res.json()
-        
-        # Emails
-        res_email = await client.get("https://api.github.com/user/emails", headers=headers)
-        emails = res_email.json() if res_email.status_code == 200 else []
-        
-        primary_email = next((e['email'] for e in emails if e.get('primary')), profile.get('email'))
-        
-        return {
-            "id": profile.get("id"),
-            "email": primary_email,
-            "name": profile.get("name") or profile.get("login")
-        }

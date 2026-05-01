@@ -39,8 +39,6 @@ class LoginRequest(BaseModel):
 class RegisterResponse(BaseModel):
     success: bool
     operator_id: str
-    recovery_phrase: Optional[str] = None 
-    # FIX: Added Optional and default None so validation doesn't fail if missing
     detail: Optional[str] = None 
 
 class TokenResponse(BaseModel):
@@ -51,9 +49,3 @@ class TokenResponse(BaseModel):
 class VerificationVerify(BaseModel):
     email: EmailStr
     code: str = Field(..., min_length=6, max_length=6)
-
-class RecoveryRequest(BaseModel):
-    """Schema for account recovery using recovery phrase"""
-    email: EmailStr
-    recovery_phrase: str = Field(..., min_length=20, description="12-word recovery phrase")
-    new_password: str = Field(..., min_length=8)

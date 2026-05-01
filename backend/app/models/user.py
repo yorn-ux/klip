@@ -24,8 +24,6 @@ class User(Base):
     
     # --- Security ---
     hashed_password = Column(String, nullable=False)
-    recovery_hash = Column(String, nullable=False)
-    recovery_phrase = Column(String, nullable=True)
     
     # --- Verification ---
     verification_code = Column(String, nullable=True)

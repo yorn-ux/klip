@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Lock, FileText, Gavel, ArrowLeft, Clock, 
-  Loader2, AlertTriangle, RefreshCw,  
+  Loader2, AlertTriangle, RefreshCw,
   History, LifeBuoy, Send, ExternalLink, 
   CheckCircle2, Menu, X, Scale, 
   ThumbsUp, ThumbsDown, MinusCircle, 
@@ -236,7 +236,7 @@ export default function GlobalResolutionCenter() {
     const headers = getAuthHeaders();
 
     try {
-      const disputesUrl = `${API_BASE_URL}/api/v1/dispute/disputes?role=${user.role}&operator_id=${user.operator_id}`;
+      const disputesUrl = `${API_BASE_URL}/api/v1/dispute/disputes?role=${user.role}`;
       const disputesResponse = await fetch(disputesUrl, { headers });
       
       if (disputesResponse.status === 401) {
@@ -255,9 +255,9 @@ export default function GlobalResolutionCenter() {
       const disputesData = await disputesResponse.json();
       setCases(Array.isArray(disputesData) ? disputesData : []);
 
-      const ticketsResponse = await fetch(`${API_BASE_URL}/api/v1/dispute/support?operator_id=${user.operator_id}`, {
-        headers
-      });
+       const ticketsResponse = await fetch(`${API_BASE_URL}/api/v1/dispute/support?operator_id=${user.operator_id}`, {
+         headers
+       });
       
       if (ticketsResponse.ok) {
         const ticketsData = await ticketsResponse.json();

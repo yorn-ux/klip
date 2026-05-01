@@ -1,7 +1,6 @@
 // src/lib/auth.ts
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import GithubProvider from "next-auth/providers/github";
 
 export const {
   handlers: { GET, POST },
@@ -14,15 +13,11 @@ export const {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
-    GithubProvider({
-      clientId: process.env.GITHUB_ID!,
-      clientSecret: process.env.GITHUB_SECRET!,
-    }),
   ],
   callbacks: {
     async signIn({ user, account }) {
       // You can integrate with your backend here
-      if (account?.provider === 'google' || account?.provider === 'github') {
+      if (account?.provider === 'google') {
         try {
           const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/oauth-login`, {
             method: 'POST',

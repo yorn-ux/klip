@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, UserPlus,  } from 'lucide-react';
+import { Search, UserPlus } from 'lucide-react';
 
 // --- TYPES ---
 interface Filters {

@@ -34,7 +34,7 @@ export default function OnboardingKYC() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/api/v1/auth/me?operator_id=${opId}`, {
+      const res = await fetch(`${API_URL}/api/v1/auth/me`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json'

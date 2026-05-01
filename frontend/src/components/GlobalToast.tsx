@@ -1,7 +1,7 @@
 'use client';
 
 import { useNotificationStore } from '@/store/useNotificationStore';
-import { X, Info, CheckCircle2, AlertCircle, AlertTriangle, Zap,  } from 'lucide-react';
+import { X, Info, CheckCircle2, AlertCircle, AlertTriangle, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export default function GlobalToast() {

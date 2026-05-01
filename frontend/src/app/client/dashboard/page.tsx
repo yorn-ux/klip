@@ -1,6 +1,6 @@
 'use client';
 
-import  { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   ArrowUpRight,  Zap, Loader2, 
 } from 'lucide-react';
@@ -42,7 +42,7 @@ export default function InfluencerDashboard() {
       const headers = { 'Authorization': `Bearer ${token}` };
 
       const [balRes, vaultRes] = await Promise.all([
-        fetch(`${API_URL}/api/v1/wallet/balance?operator_id=${opId}`, { headers }),
+        fetch(`${API_URL}/api/v1/wallet/balance`, { headers }),
         fetch(`${API_URL}/api/v1/vaults/latest?operator_id=${opId}&role=influencer`, { headers }),
       ]);
 

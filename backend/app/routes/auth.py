@@ -13,7 +13,6 @@ from app.models.notification import Notification
 from app.core.security import (
     hash_password, 
     verify_password, 
-    generate_recovery_phrase, 
     generate_operator_id,
     create_access_token,
     decode_access_token,
@@ -25,8 +24,7 @@ from app.schemas.auth import (
     LoginRequest, 
     TokenResponse,
     UserBase,
-    VerificationVerify,
-    RecoveryRequest
+    VerificationVerify
 )
 from app.services.email import (
     send_locked_email,
@@ -258,7 +256,6 @@ async def register(
 
     # New Identity Creation
     should_bypass = True if (is_root_admin or is_privileged_enroller) else False
-    recovery_phrase = generate_recovery_phrase() 
     op_id = generate_operator_id()
     otp = "".join([str(secrets.randbelow(10)) for _ in range(6)]) if not should_bypass else None
     
@@ -266,7 +263,6 @@ async def register(
         email=email_lowered,
         full_name=payload.full_name,
         hashed_password=hash_password(payload.password),
-        recovery_hash=hash_password(recovery_phrase),
         operator_id=op_id,
         role=AccountRole(payload.role.lower()),
         is_active=True,
@@ -296,7 +292,6 @@ async def register(
             return {
                 "success": True, 
                 "operator_id": op_id, 
-                "recovery_phrase": recovery_phrase,
                 "requires_verification": True
             }
         else:
@@ -309,7 +304,6 @@ async def register(
             return {
                 "success": True, 
                 "operator_id": op_id, 
-                "recovery_phrase": recovery_phrase,
                 "access_token": token,
                 "requires_verification": False
             }
@@ -366,7 +360,7 @@ async def login(
     )
 
     # Create login notification
-    user_agent = request.headers.get("user-agent", "Unknown Device")
+    user_agent = request.headers.get("user-agent") or "Unknown Device"
     # Shorten user agent for notification
     short_ua = user_agent[:60] + "..." if len(user_agent) > 60 else user_agent
     
@@ -386,7 +380,7 @@ async def login(
             send_security_alert, 
             to_email=user.email, 
             ip_address=request.client.host,
-            user_agent=request.headers.get("user-agent", "Unknown Browser")
+            user_agent=request.headers.get("user-agent") or "Unknown Browser"
         )
     
     return {
@@ -491,56 +485,6 @@ async def resend_verification(
 async def logout():
     # Client-side should clear tokens
     return {"success": True, "detail": "Session terminated."}
-
-# --- 5. ACCOUNT RECOVERY ---
-
-@router.post("/recover")
-async def recover_account(
-    payload: RecoveryRequest,
-    background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
-):
-    """
-    Recover account using recovery phrase and reset password.
-    This is a critical security endpoint that allows identity restoration.
-    """
-    email_lowered = payload.email.lower().strip()
-    
-    # Find user by email
-    user = db.query(User).filter(User.email == email_lowered).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="Identity not found.")
-    
-    # Verify recovery phrase
-    if not user.recovery_hash or not verify_password(payload.recovery_phrase, user.recovery_hash):
-        raise HTTPException(status_code=400, detail="Invalid recovery phrase.")
-    
-    # Update password
-    user.hashed_password = hash_password(payload.new_password)
-    
-    # Invalidate all existing sessions by resetting verification code
-    # (User will need to re-login with new password)
-    user.verification_code = None
-    
-    # Create recovery notification
-    create_notification(
-        db=db,
-        operator_id=user.operator_id,
-        title="Account Recovered",
-        message="Your password has been reset using your recovery phrase. If this wasn't you, contact support immediately.",
-        priority="HIGH",
-        category="security"
-    )
-    
-    db.commit()
-    
-    # Send notification email (optional, since email may not be accessible)
-    # background_tasks.add_task(send_welcome_email, user.email, user.full_name)
-    
-    return {
-        "success": True,
-        "detail": "Account recovered successfully. You can now login with your new password."
-    }
 
 # --- 5. SECURITY PROTOCOLS ---
 
