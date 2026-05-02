@@ -1,17 +1,27 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // Get token from cookies
-  const token = request.cookies.get('klip_token')?.value;
-  const userRole = request.cookies.get('user_role')?.value?.toLowerCase(); 
+  // Get token from cookies OR headers (for API responses)
+  let token = request.cookies.get('access_token')?.value || 
+              request.cookies.get('klip_token')?.value;
+  
+  // Also check Authorization header (for API calls)
+  const authHeader = request.headers.get('authorization');
+  if (!token && authHeader?.startsWith('Bearer ')) {
+    token = authHeader.substring(7);
+  }
+  
+  const userRole = request.cookies.get('user_role')?.value?.toLowerCase();
 
   // Debug logging (remove in production)
-  console.log('Proxy - Path:', pathname);
-  console.log('Proxy - Token:', token ? 'Present' : 'Missing');
-  console.log('Proxy - User Role:', userRole);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Middleware - Path:', pathname);
+    console.log('Middleware - Token:', token ? 'Present' : 'Missing');
+    console.log('Middleware - User Role:', userRole);
+  }
 
   // Route Classification
   const isAdminRoute = pathname.startsWith('/admin');
@@ -53,65 +63,69 @@ export async function proxy(request: NextRequest) {
 
   // A. PUBLIC ROUTES - Always accessible
   if (isPublicRoute) {
-    console.log('Proxy - Public route, allowing access');
     return NextResponse.next();
   }
 
-  // B. AUTH ROUTES - If logged in, redirect to dashboard; if logged out, show auth pages
+  // B. AUTH ROUTES - If logged in, redirect to dashboard
   if (isAuthRoute) {
-    if (token) {
+    if (token && userRole) {
       // User is logged in - redirect to their dashboard
-      console.log('Proxy - Auth route with token, redirecting to:', userHome);
-      return NextResponse.redirect(new URL(userHome, request.url));
+      const dashboardUrl = new URL(userHome, request.url);
+      return NextResponse.redirect(dashboardUrl);
     }
     // User is logged out - allow access to auth pages
-    console.log('Proxy - Auth route without token, allowing access');
     return NextResponse.next();
   }
 
   // C. PROTECTED ROUTES - Require authentication
   if (!token) {
     // No token - redirect to login
-    console.log('Proxy - No token, redirecting to login');
     const loginUrl = new URL('/auth/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // D. SHARED ROUTES - Accessible by multiple roles
-  if (isVaultsRoute || isWalletRoute || isSupportRoute || isSettingsRoute) {
-    console.log('Proxy - Shared route, allowing access for role:', userRole);
+  // D. If token exists but no role, try to get it from token or let root layout handle it
+  if (!userRole) {
+    // Allow access, root layout will fetch user data
     return NextResponse.next();
   }
 
-  // E. ROLE-BASED ACCESS CONTROL
-  if (token && userRole) {
-    // Admin routes - only admin can access
-    if (isAdminRoute && userRole !== 'admin') {
-      console.log('Proxy - Non-admin trying to access admin route, redirecting to:', userHome);
-      return NextResponse.redirect(new URL(userHome, request.url));
-    }
-    
-    // Business routes - only business can access
-    if (isBusinessRoute && !['business', 'brand', 'enterprise', 'operator'].includes(userRole)) {
-      console.log('Proxy - Non-business trying to access business route, redirecting to:', userHome);
-      return NextResponse.redirect(new URL(userHome, request.url));
-    }
+  // E. SHARED ROUTES - Accessible by multiple roles
+  if (isVaultsRoute || isWalletRoute || isSupportRoute || isSettingsRoute) {
+    return NextResponse.next();
+  }
 
-    // Client routes - only influencers/clients can access
-    if (isClientRoute && !['influencer', 'client'].includes(userRole)) {
-      console.log('Proxy - Non-client trying to access client route, redirecting to:', userHome);
-      return NextResponse.redirect(new URL(userHome, request.url));
-    }
+  // F. ROLE-BASED ACCESS CONTROL
+  // Admin routes - only admin can access
+  if (isAdminRoute && userRole !== 'admin') {
+    return NextResponse.redirect(new URL(userHome, request.url));
+  }
+  
+  // Business routes - only business can access
+  if (isBusinessRoute && !['business', 'brand', 'enterprise', 'operator'].includes(userRole)) {
+    return NextResponse.redirect(new URL(userHome, request.url));
+  }
+
+  // Client routes - only influencers/clients can access
+  if (isClientRoute && !['influencer', 'client'].includes(userRole)) {
+    return NextResponse.redirect(new URL(userHome, request.url));
   }
 
   // Allow the request to proceed
-  console.log('Proxy - Allowing access to:', pathname);
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
+    /*
+     * Match all request paths except:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public files (.png, .jpg, .jpeg, .gif, .webp, .svg)
+     */
     '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

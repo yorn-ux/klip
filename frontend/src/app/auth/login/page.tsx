@@ -9,18 +9,19 @@ import {
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/useNotificationStore';
 
-// --- Types ---
-interface VerificationData {
-  email: string;
-  requiresVerification: boolean;
-}
-
-// Role-based dashboard routing - FAST lookup
+// Role-based dashboard routing
 const getDashboardRoute = (role: string): string => {
   const roleLower = role.toLowerCase();
   if (roleLower === 'admin') return '/admin/dashboard';
   if (roleLower === 'business') return '/business/dashboard';
   return '/client/dashboard';
+};
+
+// Helper to set cookies (for middleware)
+const setCookie = (name: string, value: string, hours: number = 1) => {
+  const expires = new Date();
+  expires.setTime(expires.getTime() + hours * 60 * 60 * 1000);
+  document.cookie = `${name}=${value}; path=/; expires=${expires.toUTCString()}; SameSite=Lax`;
 };
 
 export default function LoginPage() {
@@ -31,6 +32,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   
   // --- Form Data ---
   const [formData, setFormData] = useState({
@@ -43,18 +45,24 @@ export default function LoginPage() {
   const [verificationCode, setVerificationCode] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [isResending, setIsResending] = useState(false);
-  const [verificationTimer, setVerificationTimer] = useState<NodeJS.Timeout | null>(null);
 
-  // Cleanup timer on unmount
+  // CHECK IF ALREADY LOGGED IN - Prevents infinite loop
   useEffect(() => {
-    return () => {
-      if (verificationTimer) clearInterval(verificationTimer);
-    };
-  }, [verificationTimer]);
+    const token = localStorage.getItem('access_token');
+    const userRole = localStorage.getItem('user_role');
+    
+    if (token && userRole && !isRedirecting) {
+      setIsRedirecting(true);
+      const dashboardRoute = getDashboardRoute(userRole);
+      router.replace(dashboardRoute);
+    }
+  }, [router, isRedirecting]);
 
-  // --- Login Handler - FIXED ---
+  // --- Login Handler ---
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isRedirecting) return;
     
     if (!formData.email || !formData.password) {
       showToast("Please enter both email and password", "error");
@@ -62,6 +70,7 @@ export default function LoginPage() {
     }
     
     setIsLoading(true);
+    setIsRedirecting(true);
     
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -75,16 +84,15 @@ export default function LoginPage() {
       });
 
       const data = await response.json();
-      console.log('Login response:', data); // Debug log
       
       // Handle unverified email
       if (response.status === 403 && data.detail?.includes("Email not verified")) {
+        setIsRedirecting(false);
         setVerificationData({
           email: formData.email.toLowerCase().trim(),
           requiresVerification: true
         });
         
-        // Start countdown for resend
         setCountdown(60);
         const timer = setInterval(() => {
           setCountdown(prev => {
@@ -92,7 +100,6 @@ export default function LoginPage() {
             return prev - 1;
           });
         }, 1000);
-        setVerificationTimer(timer);
         
         showToast("Please verify your email first", "info");
         setIsLoading(false);
@@ -101,34 +108,40 @@ export default function LoginPage() {
       
       if (!response.ok) throw new Error(data.detail || "Login failed");
 
-      // STORE TOKEN IMMEDIATELY
+      // Store token and user data
       const token = data.access_token;
+      const expiresIn = data.expires_in || 1800; // 30 minutes default
+      
+      // Store in localStorage
       localStorage.setItem('access_token', token);
       
-      // Get user role from response - THIS IS THE KEY FIX
       let userRole = 'influencer';
       if (data.user && data.user.role) {
         userRole = data.user.role.toLowerCase();
       }
       
-      // Store user data
       localStorage.setItem('user_role', userRole);
       localStorage.setItem('user_email', data.user?.email || formData.email);
       localStorage.setItem('user_name', data.user?.full_name || '');
       localStorage.setItem('user_operator_id', data.user?.operator_id || '');
       
-      console.log('Stored role:', userRole); // Debug log
+      // ALSO SET COOKIES FOR MIDDLEWARE
+      const cookieHours = expiresIn / 3600; // Convert seconds to hours
+      setCookie('access_token', token, cookieHours);
+      setCookie('user_role', userRole, cookieHours);
+      setCookie('user_email', data.user?.email || formData.email, cookieHours);
+      
       showToast("Login successful!", "success");
       
-      // INSTANT REDIRECT
+      // Redirect to dashboard
       const dashboardRoute = getDashboardRoute(userRole);
-      console.log('Redirecting to:', dashboardRoute); // Debug log
-      router.push(dashboardRoute);
+      window.location.href = dashboardRoute;
       
     } catch (err: any) {
       console.error('Login error:', err);
       showToast(err.message, "error");
       setIsLoading(false);
+      setIsRedirecting(false);
     }
   };
 
@@ -156,7 +169,6 @@ export default function LoginPage() {
             return prev - 1;
           });
         }, 1000);
-        setVerificationTimer(timer);
         showToast("New verification code sent to your email", "success");
       } else {
         const data = await res.json();
@@ -169,7 +181,7 @@ export default function LoginPage() {
     }
   };
 
-  // --- Verify Email Code - FIXED ---
+  // --- Verify Email Code ---
   const handleVerifyEmail = async () => {
     if (!verificationCode || verificationCode.length !== 6) {
       showToast("Please enter the 6-digit verification code", "error");
@@ -177,6 +189,8 @@ export default function LoginPage() {
     }
 
     setIsVerifying(true);
+    setIsRedirecting(true);
+    
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const res = await fetch(`${API_URL}/api/v1/auth/verify-email`, {
@@ -189,24 +203,24 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
-      console.log('Verification response:', data); // Debug log
       
       if (!res.ok) throw new Error(data.detail || "Verification failed");
 
       if (data.access_token) {
-        // Store token immediately
-        localStorage.setItem('access_token', data.access_token);
+        const token = data.access_token;
+        const expiresIn = data.expires_in || 1800;
+        
+        // Store in localStorage
+        localStorage.setItem('access_token', token);
         localStorage.setItem('user_email', verificationData?.email || '');
         
-        // Get user role - either from response or fetch
         let userRole = 'influencer';
         
         if (data.user?.role) {
           userRole = data.user.role.toLowerCase();
         } else {
-          // Fetch user data to get role
           const meRes = await fetch(`${API_URL}/api/v1/auth/me`, {
-            headers: { 'Authorization': `Bearer ${data.access_token}` }
+            headers: { 'Authorization': `Bearer ${token}` }
           });
           if (meRes.ok) {
             const userData = await meRes.json();
@@ -218,20 +232,38 @@ export default function LoginPage() {
         
         localStorage.setItem('user_role', userRole);
         
+        // ALSO SET COOKIES FOR MIDDLEWARE
+        const cookieHours = expiresIn / 3600;
+        setCookie('access_token', token, cookieHours);
+        setCookie('user_role', userRole, cookieHours);
+        setCookie('user_email', verificationData?.email || '', cookieHours);
+        
         showToast("Email verified successfully!", "success");
         
-        // INSTANT REDIRECT to role-based dashboard
+        // Redirect to dashboard
         const dashboardRoute = getDashboardRoute(userRole);
-        console.log('Verification redirect to:', dashboardRoute); // Debug log
-        router.push(dashboardRoute);
+        window.location.href = dashboardRoute;
       }
       
     } catch (err: any) {
       console.error('Verification error:', err);
       showToast(err.message, "error");
       setIsVerifying(false);
+      setIsRedirecting(false);
     }
   };
+
+  // If already redirecting, show loading
+  if (isRedirecting && localStorage.getItem('access_token')) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="animate-spin w-8 h-8 text-slate-900 mx-auto mb-4" />
+          <p className="text-sm text-slate-500">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans selection:bg-amber-100">
@@ -248,7 +280,7 @@ export default function LoginPage() {
       </header>
 
       <main className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-[440px] animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="w-full max-w-[440px]">
           
           {/* LOGO AREA */}
           <div className="text-center mb-8">
@@ -267,7 +299,7 @@ export default function LoginPage() {
 
           {/* VERIFICATION FORM */}
           {verificationData ? (
-            <div className="space-y-6 animate-in zoom-in-95 duration-500">
+            <div className="space-y-6">
               <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl flex gap-3 items-start">
                 <AlertCircle className="text-amber-600 shrink-0" size={18} />
                 <div className="text-xs text-amber-800 leading-relaxed">
@@ -314,8 +346,8 @@ export default function LoginPage() {
                     onClick={() => {
                       setVerificationData(null);
                       setVerificationCode('');
-                      if (verificationTimer) clearInterval(verificationTimer);
                       setCountdown(0);
+                      setIsRedirecting(false);
                     }}
                     className="flex-1 text-sm text-slate-500 hover:text-slate-700 transition-colors"
                   >
@@ -369,7 +401,7 @@ export default function LoginPage() {
 
               <button 
                 type="submit" 
-                disabled={isLoading}
+                disabled={isLoading || isRedirecting}
                 className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold transition-all flex justify-center items-center gap-2 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 shadow-lg shadow-slate-100"
               >
                 {isLoading ? <Loader2 className="animate-spin" size={18} /> : <>Sign in <ArrowRight size={18} /></>}
@@ -406,4 +438,9 @@ export default function LoginPage() {
       </footer>
     </div>
   );
+}
+
+interface VerificationData {
+  email: string;
+  requiresVerification: boolean;
 }

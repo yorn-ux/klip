@@ -58,12 +58,15 @@ const PUBLIC_PAGES = [
   '/terms',
   '/about',
   '/pricing',
-  '/features'
+  '/features',
+  '/auth/login',      // ← ADD THIS
+  '/auth/register',   // ← ADD THIS
+  '/auth/forgot-password',  // ← ADD THIS
+  '/auth/reset-password',   // ← ADD THIS
 ];
 
 /* =========================
-   NAVIGATION MAP with Icons - FIXED
-   influencer → /client/dashboard
+   NAVIGATION MAP with Icons
 ========================= */
 
 const NAV_MAP: Record<UserRole, { label: string; href: string; icon: any }[]> = {
@@ -89,21 +92,6 @@ const NAV_MAP: Record<UserRole, { label: string; href: string; icon: any }[]> = 
     { label: 'Audit', href: '/admin/audit', icon: FileText },
     { label: 'Disputes', href: '/support', icon: Scale },
   ]
-};
-
-// Role-based dashboard redirect helper
-const getDashboardRoute = (role: string): string => {
-  const roleLower = role.toLowerCase();
-  switch (roleLower) {
-    case 'admin':
-      return '/admin/dashboard';
-    case 'business':
-      return '/business/dashboard';
-    case 'influencer':
-      return '/client/dashboard';
-    default:
-      return '/client/dashboard';
-  }
 };
 
 // Professional Logo Component
@@ -193,13 +181,14 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Check if current page is public
+  // Check if current page is public - FIXED
   const isPublicPage = PUBLIC_PAGES.includes(pathname || '') || 
                        pathname?.startsWith('/auth/') || 
                        pathname?.startsWith('/_next') ||
                        pathname?.startsWith('/settings') ||
                        pathname?.startsWith('/terms') ||
-                       pathname?.startsWith('/privacy');
+                       pathname?.startsWith('/privacy') ||
+                       pathname === '/';
 
   const handleLogout = useCallback(() => {
     // Clear localStorage
@@ -261,7 +250,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       const token = localStorage.getItem('access_token');
       
       if (!token) {
-        router.push('/auth/login');
+        router.replace('/auth/login');
         setIsInitializing(false);
         return;
       }
@@ -273,7 +262,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         if (!userData) {
           // Token invalid or expired
           localStorage.removeItem('access_token');
-          router.push('/auth/login');
+          router.replace('/auth/login');
           setIsInitializing(false);
           return;
         }
@@ -311,20 +300,10 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           fetchUserNotifications(user.operatorId);
         }
         
-        // Check if user is on wrong dashboard for their role
-        const expectedRoute = getDashboardRoute(role);
-        if (pathname === '/client/dashboard' && role !== 'influencer') {
-          router.push(expectedRoute);
-        } else if (pathname === '/business/dashboard' && role !== 'business') {
-          router.push(expectedRoute);
-        } else if (pathname === '/admin/dashboard' && role !== 'admin') {
-          router.push(expectedRoute);
-        }
-        
       } catch (error) {
         console.error('Failed to parse user data:', error);
         localStorage.removeItem('access_token');
-        router.push('/auth/login');
+        router.replace('/auth/login');
       } finally {
         setIsInitializing(false);
       }
