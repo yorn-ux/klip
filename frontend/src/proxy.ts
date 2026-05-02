@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // Get token from cookies OR headers (for API responses)
@@ -18,9 +18,9 @@ export async function middleware(request: NextRequest) {
 
   // Debug logging (remove in production)
   if (process.env.NODE_ENV === 'development') {
-    console.log('Middleware - Path:', pathname);
-    console.log('Middleware - Token:', token ? 'Present' : 'Missing');
-    console.log('Middleware - User Role:', userRole);
+    console.log('Proxy - Path:', pathname);
+    console.log('Proxy - Token:', token ? 'Present' : 'Missing');
+    console.log('Proxy - User Role:', userRole);
   }
 
   // Route Classification
@@ -85,7 +85,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // D. If token exists but no role, try to get it from token or let root layout handle it
+  // D. If token exists but no role, let root layout handle it
   if (!userRole) {
     // Allow access, root layout will fetch user data
     return NextResponse.next();
