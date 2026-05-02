@@ -1,9 +1,3 @@
-import { Metadata } from 'next'
-
-export const metadata: Metadata = {
-  title: 'Something went wrong',
-}
-
 export default function GlobalError({
   error,
   reset,
