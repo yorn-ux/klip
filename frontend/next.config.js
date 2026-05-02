@@ -1,4 +1,3 @@
-cat > next.config.js << 'EOF'
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   env: {
@@ -7,4 +6,3 @@ const nextConfig = {
 };
 
 export default nextConfig;
-EOF
