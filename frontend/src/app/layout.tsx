@@ -40,10 +40,12 @@ type UserRole = 'influencer' | 'business' | 'admin';
 
 interface CurrentUser {
   id: string;
+  operatorId: string;
   fullName: string;
   email: string;
   role: UserRole;
   rawRole: string;
+  isVerified: boolean;
 }
 
 /* =========================
@@ -60,7 +62,8 @@ const PUBLIC_PAGES = [
 ];
 
 /* =========================
-   NAVIGATION MAP with Icons
+   NAVIGATION MAP with Icons - FIXED
+   influencer → /client/dashboard
 ========================= */
 
 const NAV_MAP: Record<UserRole, { label: string; href: string; icon: any }[]> = {
@@ -88,34 +91,38 @@ const NAV_MAP: Record<UserRole, { label: string; href: string; icon: any }[]> = 
   ]
 };
 
-// Professional Logo Component - Redesigned
+// Role-based dashboard redirect helper
+const getDashboardRoute = (role: string): string => {
+  const roleLower = role.toLowerCase();
+  switch (roleLower) {
+    case 'admin':
+      return '/admin/dashboard';
+    case 'business':
+      return '/business/dashboard';
+    case 'influencer':
+      return '/client/dashboard';
+    default:
+      return '/client/dashboard';
+  }
+};
+
+// Professional Logo Component
 const KlipLogo = () => (
   <div className="relative flex items-center gap-3 group">
-    {/* Logo Mark */}
     <div className="relative w-10 h-10">
-      {/* Background Shield */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl rotate-6 transform group-hover:rotate-12 transition-all duration-300 shadow-lg" />
-      
-      {/* Inner Geometric Pattern */}
       <div className="absolute inset-[2px] bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg rotate-6 transform" />
-      
-      {/* Gold Accent Lines */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="w-4 h-0.5 bg-amber-400/60 rounded-full rotate-45 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
         <div className="w-4 h-0.5 bg-amber-400/60 rounded-full -rotate-45 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
       </div>
-      
-      {/* Central Gem */}
       <div className="absolute inset-0 flex items-center justify-center">
         <Gem size={16} className="text-amber-400 group-hover:text-amber-300 transition-colors" strokeWidth={1.5} />
       </div>
-      
-      {/* Security Verification Dots */}
       <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white animate-pulse" />
       <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white animate-pulse delay-150" />
     </div>
 
-    {/* Text Mark */}
     <div className="flex flex-col">
       <div className="flex items-baseline gap-1">
         <span className="text-xl font-black tracking-tight text-slate-900 group-hover:text-slate-700 transition-colors">
@@ -195,49 +202,51 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                        pathname?.startsWith('/privacy');
 
   const handleLogout = useCallback(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-    let domain = '';
+    // Clear localStorage
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user_role');
+    localStorage.removeItem('user_email');
+    localStorage.removeItem('user_name');
+    localStorage.removeItem('klip_user');
+    localStorage.removeItem('auth_token');
     
-    if (apiUrl) {
-      try {
-        const url = new URL(apiUrl);
-        domain = url.hostname;
-      } catch (e) {
-        console.error('Invalid API URL:', e);
-      }
-    }
-    
-    if (!domain && typeof window !== 'undefined') {
-      const hostname = window.location.hostname;
-      domain = hostname.includes('onrender.com') 
-        ? '.onrender.com' 
-        : hostname.includes('vercel.app')
-        ? '.vercel.app'
-        : hostname === 'localhost' 
-        ? 'localhost'
-        : hostname;
-    }
-    
-    if (domain) {
-      document.cookie = `klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=${domain};`;
-      document.cookie = `user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=${domain};`;
-      document.cookie = `setup_complete=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=${domain};`;
-    }
-    
-    document.cookie = "klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-    document.cookie = "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-    document.cookie = "setup_complete=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-    
-    localStorage.clear();
+    // Clear sessionStorage
     sessionStorage.clear();
+    
+    // Clear cookies
+    document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+    document.cookie = "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+    document.cookie = "klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
     
     setCurrentUser(null);
     showToast('You have been signed out', 'success');
-    window.location.href = '/auth/login?t=' + Date.now();
-  }, [showToast]);
+    router.push('/auth/login');
+  }, [showToast, router]);
+
+  // Fetch user data from API using token
+  const fetchUserData = useCallback(async (token: string) => {
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${API_URL}/api/v1/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const userData = await response.json();
+        return userData;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to fetch user data:', error);
+      return null;
+    }
+  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {
+      // Skip auth check for auth pages and public pages
       if (pathname?.startsWith('/auth/')) {
         setIsInitializing(false);
         return;
@@ -248,63 +257,86 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const getCookie = (name: string): string | null => {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) {
-          return parts.pop()?.split(';').shift() || null;
-        }
-        return null;
-      };
+      // Get token from localStorage
+      const token = localStorage.getItem('access_token');
       
-      const authToken = localStorage.getItem('auth_token') || getCookie('klip_token');
-      const stored = localStorage.getItem('klip_user');
-
-      if (!authToken || !stored) {
-        router.push('/auth/login?t=' + Date.now());
+      if (!token) {
+        router.push('/auth/login');
         setIsInitializing(false);
         return;
       }
 
       try {
-        const parsed = JSON.parse(stored);
+        // Fetch fresh user data from API
+        const userData = await fetchUserData(token);
         
-        let role: UserRole = 'influencer';
-        const raw = (parsed.role || '').toLowerCase();
+        if (!userData) {
+          // Token invalid or expired
+          localStorage.removeItem('access_token');
+          router.push('/auth/login');
+          setIsInitializing(false);
+          return;
+        }
 
-        if (parsed.is_admin || raw === 'admin') role = 'admin';
-        else if (['business', 'brand', 'enterprise', 'operator'].includes(raw)) role = 'business';
+        // Determine role
+        let role: UserRole = 'influencer';
+        const rawRole = (userData.role || '').toLowerCase();
+        
+        if (rawRole === 'admin') {
+          role = 'admin';
+        } else if (rawRole === 'business') {
+          role = 'business';
+        } else {
+          role = 'influencer';
+        }
 
         const user: CurrentUser = {
-          id: parsed.id || parsed.operator_id || '',
-          fullName: parsed.full_name || 'User',
-          email: parsed.email || '',
+          id: userData.id || userData.operator_id || '',
+          operatorId: userData.operator_id || '',
+          fullName: userData.full_name || 'User',
+          email: userData.email || '',
           role,
-          rawRole: raw
+          rawRole: rawRole,
+          isVerified: userData.is_verified || false
         };
 
         setCurrentUser(user);
         
-        if (user.id) {
-          fetchUserNotifications(user.id);
+        // Store role in localStorage for quick access
+        localStorage.setItem('user_role', role);
+        localStorage.setItem('klip_user', JSON.stringify(user));
+        
+        // Fetch notifications if user has ID
+        if (user.operatorId) {
+          fetchUserNotifications(user.operatorId);
         }
+        
+        // Check if user is on wrong dashboard for their role
+        const expectedRoute = getDashboardRoute(role);
+        if (pathname === '/client/dashboard' && role !== 'influencer') {
+          router.push(expectedRoute);
+        } else if (pathname === '/business/dashboard' && role !== 'business') {
+          router.push(expectedRoute);
+        } else if (pathname === '/admin/dashboard' && role !== 'admin') {
+          router.push(expectedRoute);
+        }
+        
       } catch (error) {
         console.error('Failed to parse user data:', error);
-        localStorage.removeItem('klip_user');
-        router.push('/auth/login?t=' + Date.now());
+        localStorage.removeItem('access_token');
+        router.push('/auth/login');
       } finally {
         setIsInitializing(false);
       }
     };
 
     checkAuth();
-  }, [pathname, isPublicPage, router, fetchUserNotifications]);
+  }, [pathname, isPublicPage, router, fetchUserData, fetchUserNotifications]);
 
   if (isInitializing) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-white">
         <div className="relative">
-          {/* Animated Logo */}
           <div className="relative w-20 h-20 mb-6">
             <div className="absolute inset-0 bg-slate-900 rounded-2xl rotate-12 animate-pulse" />
             <div className="absolute inset-[3px] bg-slate-800 rounded-xl rotate-12" />
@@ -313,8 +345,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             </div>
             <div className="absolute -top-2 -right-2 w-3 h-3 bg-emerald-500 rounded-full animate-ping" />
           </div>
-          
-          {/* Loading Text */}
           <div className="text-center space-y-3">
             <p className="text-sm font-medium text-slate-900">Klip</p>
             <div className="flex items-center justify-center gap-1">
@@ -410,7 +440,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
             {/* Notifications */}
             <div className="relative">
-              <NotificationBell userId={currentUser.id} />
+              <NotificationBell userId={currentUser.operatorId} />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] text-[10px] bg-amber-500 text-white font-bold rounded-full flex items-center justify-center ring-2 ring-white shadow-sm">
                   {unreadCount > 9 ? '9+' : unreadCount}
@@ -431,21 +461,18 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             <div className="hidden md:flex items-center gap-3">
               <div className="h-6 w-px bg-slate-200" />
               <div className="flex items-center gap-3">
-                {/* Role Badge */}
                 <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${getRoleColor(currentUser.role)}`}>
                   <RoleIcon size={12} />
                   <span className="text-[10px] font-semibold uppercase tracking-wider">
-                    {currentUser.role}
+                    {currentUser.role === 'influencer' ? 'Creator' : currentUser.role}
                   </span>
                 </div>
                 
-                {/* User Info */}
                 <div className="text-right">
                   <p className="text-sm font-semibold text-slate-900">{currentUser.fullName}</p>
                   <p className="text-[10px] text-slate-400">{currentUser.email}</p>
                 </div>
                 
-                {/* Logout Button */}
                 <button
                   onClick={handleLogout}
                   className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition group relative"
@@ -456,7 +483,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
               </div>
             </div>
 
-            {/* Mobile Menu Button (hidden on desktop) */}
+            {/* Mobile Menu Button */}
             <div className="md:hidden">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -485,7 +512,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                     <p className="text-xs text-slate-400">{currentUser.email}</p>
                   </div>
                   <div className={`px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border ${getRoleColor(currentUser.role)}`}>
-                    {currentUser.role}
+                    {currentUser.role === 'influencer' ? 'Creator' : currentUser.role}
                   </div>
                 </div>
               </div>
@@ -577,10 +604,10 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 Privacy
               </Link>
             </div>
-             <p className="text-xs text-slate-400">
-               © {new Date().getFullYear()} Klip. All rights reserved. 
-               <span className="hidden sm:inline"> Secure payment vaults for creators and brands.</span>
-             </p>
+            <p className="text-xs text-slate-400">
+              © {new Date().getFullYear()} Klip. All rights reserved. 
+              <span className="hidden sm:inline"> Secure payment vaults for creators and brands.</span>
+            </p>
           </div>
         </div>
       </footer>

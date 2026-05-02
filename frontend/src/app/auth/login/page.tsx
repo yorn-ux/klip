@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Loader2, ArrowRight, Eye, EyeOff, Mail, Lock, 
-  ChevronLeft, ShieldCheck, AlertCircle, CheckCircle2
+  ChevronLeft, ShieldCheck, AlertCircle, 
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/useNotificationStore';
 
@@ -14,6 +14,15 @@ interface VerificationData {
   email: string;
   requiresVerification: boolean;
 }
+
+// Role-based dashboard routing - FAST lookup
+const getDashboardRoute = (role: string): string => {
+  const roleLower = role.toLowerCase();
+  // Direct mapping for speed
+  if (roleLower === 'admin') return '/admin/dashboard';
+  if (roleLower === 'business') return '/business/dashboard';
+  return '/client/dashboard'; // Default for influencer and others
+};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,23 +44,16 @@ export default function LoginPage() {
   const [verificationCode, setVerificationCode] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [isResending, setIsResending] = useState(false);
+  const [verificationTimer, setVerificationTimer] = useState<NodeJS.Timeout | null>(null);
 
-  // Role-based dashboard routing
-  const getDashboardRoute = (role: string): string => {
-    const roleLower = role.toLowerCase();
-    switch (roleLower) {
-      case 'admin':
-        return '/admin/dashboard';
-      case 'business':
-        return '/business/dashboard';
-      case 'influencer':
-        return '/client/dashboard';
-      default:
-        return '/client/dashboard';
-    }
-  };
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (verificationTimer) clearInterval(verificationTimer);
+    };
+  }, [verificationTimer]);
 
-  // --- Login Handler ---
+  // --- Login Handler - Optimized for speed ---
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -61,9 +63,10 @@ export default function LoginPage() {
     }
     
     setIsLoading(true);
+    
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const res = await fetch(`${API_URL}/api/v1/auth/login`, {
+      const response = await fetch(`${API_URL}/api/v1/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -72,11 +75,10 @@ export default function LoginPage() {
         }),
       });
 
-      const data = await res.json();
+      const data = await response.json();
       
-      // Check if email not verified (403 with specific message)
-      if (res.status === 403 && data.detail?.includes("Email not verified")) {
-        // Store email for verification
+      // Handle unverified email
+      if (response.status === 403 && data.detail?.includes("Email not verified")) {
         setVerificationData({
           email: formData.email.toLowerCase().trim(),
           requiresVerification: true
@@ -90,28 +92,36 @@ export default function LoginPage() {
             return prev - 1;
           });
         }, 1000);
+        setVerificationTimer(timer);
         
         showToast("Please verify your email first", "info");
+        setIsLoading(false);
         return;
       }
       
-      if (!res.ok) throw new Error(data.detail || "Login failed");
+      if (!response.ok) throw new Error(data.detail || "Login failed");
 
-      // Successful login - store token and user data
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('user_role', data.user?.role || 'influencer');
-      localStorage.setItem('user_email', data.user?.email);
-      localStorage.setItem('user_name', data.user?.full_name);
+      // STORE TOKEN IMMEDIATELY
+      const token = data.access_token;
+      localStorage.setItem('access_token', token);
+      
+      // Get user role from response (already provided by backend)
+      const userRole = data.user?.role?.toLowerCase() || 'influencer';
+      const userEmail = data.user?.email || formData.email;
+      const userName = data.user?.full_name || '';
+      
+      localStorage.setItem('user_role', userRole);
+      localStorage.setItem('user_email', userEmail);
+      localStorage.setItem('user_name', userName);
       
       showToast("Login successful!", "success");
       
-      // Redirect based on role
-      const dashboardRoute = getDashboardRoute(data.user?.role || 'influencer');
+      // INSTANT REDIRECT - no delay
+      const dashboardRoute = getDashboardRoute(userRole);
       router.push(dashboardRoute);
       
     } catch (err: any) {
       showToast(err.message, "error");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -140,6 +150,7 @@ export default function LoginPage() {
             return prev - 1;
           });
         }, 1000);
+        setVerificationTimer(timer);
         showToast("New verification code sent to your email", "success");
       } else {
         const data = await res.json();
@@ -152,7 +163,7 @@ export default function LoginPage() {
     }
   };
 
-  // --- Verify Email Code ---
+  // --- Verify Email Code - With instant redirect ---
   const handleVerifyEmail = async () => {
     if (!verificationCode || verificationCode.length !== 6) {
       showToast("Please enter the 6-digit verification code", "error");
@@ -175,26 +186,38 @@ export default function LoginPage() {
       if (!res.ok) throw new Error(data.detail || "Verification failed");
 
       if (data.access_token) {
+        // Store token immediately
         localStorage.setItem('access_token', data.access_token);
         localStorage.setItem('user_email', verificationData?.email || '');
         
-        // Try to get user role from login response or default to influencer
-        // You might want to fetch user details here
-        localStorage.setItem('user_role', 'influencer');
+        // Get user role - either from response or fetch
+        let userRole = 'influencer';
+        
+        if (data.user?.role) {
+          userRole = data.user.role.toLowerCase();
+        } else {
+          // Fast fetch user data to get role
+          const meRes = await fetch(`${API_URL}/api/v1/auth/me`, {
+            headers: { 'Authorization': `Bearer ${data.access_token}` }
+          });
+          if (meRes.ok) {
+            const userData = await meRes.json();
+            userRole = userData.role?.toLowerCase() || 'influencer';
+            localStorage.setItem('user_name', userData.full_name || '');
+          }
+        }
+        
+        localStorage.setItem('user_role', userRole);
+        
+        showToast("Email verified successfully!", "success");
+        
+        // INSTANT REDIRECT to role-based dashboard
+        const dashboardRoute = getDashboardRoute(userRole);
+        router.push(dashboardRoute);
       }
-      
-      showToast("Email verified successfully! Please login again.", "success");
-      
-      // Reset to login form after 2 seconds
-      setTimeout(() => {
-        setVerificationData(null);
-        setVerificationCode('');
-        setFormData({ email: '', password: '' });
-      }, 2000);
       
     } catch (err: any) {
       showToast(err.message, "error");
-    } finally {
       setIsVerifying(false);
     }
   };
@@ -259,7 +282,7 @@ export default function LoginPage() {
                   disabled={isVerifying || verificationCode.length !== 6}
                   className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold transition-all flex justify-center items-center gap-2 disabled:opacity-50"
                 >
-                  {isVerifying ? <Loader2 className="animate-spin" size={18} /> : <>Verify Email <CheckCircle2 size={16} /></>}
+                  {isVerifying ? <Loader2 className="animate-spin" size={18} /> : <>Verify & Continue <ArrowRight size={16} /></>}
                 </button>
 
                 <div className="flex gap-3">
@@ -280,6 +303,8 @@ export default function LoginPage() {
                     onClick={() => {
                       setVerificationData(null);
                       setVerificationCode('');
+                      if (verificationTimer) clearInterval(verificationTimer);
+                      setCountdown(0);
                     }}
                     className="flex-1 text-sm text-slate-500 hover:text-slate-700 transition-colors"
                   >
@@ -300,6 +325,7 @@ export default function LoginPage() {
                   placeholder="Email address"
                   value={formData.email}
                   onChange={e => setFormData({...formData, email: e.target.value})}
+                  autoComplete="email"
                 />
               </div>
 
@@ -312,6 +338,7 @@ export default function LoginPage() {
                   placeholder="Password"
                   value={formData.password}
                   onChange={e => setFormData({...formData, password: e.target.value})}
+                  autoComplete="current-password"
                 />
                 <button 
                   type="button" 
