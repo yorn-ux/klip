@@ -9,9 +9,9 @@ class UserSettings(Base):
     __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String, ForeignKey("users.operator_id"), nullable=False)  # Removed unique and index from here
+    user_id = Column(String, ForeignKey("users.operator_id"), nullable=False)
     
-    # 1. Identity Core
+    # 1. Identity Core - NO recovery phrase
     full_name = Column(String)
     username = Column(String, unique=True, nullable=True)
     bio = Column(Text, default="")
@@ -73,7 +73,7 @@ class UserSettings(Base):
         "security_alerts": True
     })
     
-    # 6. Security Settings
+    # 6. Security Settings - NO recovery hash
     mfa_enabled = Column(Boolean, default=False)
     mfa_secret = Column(String, nullable=True)
     last_login_ip = Column(String, nullable=True)
@@ -85,7 +85,7 @@ class UserSettings(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     
-    # 🟢 Relationship to User
+    # Relationship to User
     user = relationship(
         "User", 
         back_populates="settings",
@@ -93,7 +93,8 @@ class UserSettings(Base):
         foreign_keys=[user_id]
     )
     
-    # ❌ REMOVED: problematic business relationship
+    def __repr__(self):
+        return f"<UserSettings user_id={self.user_id} username={self.username}>"
 
 
 class BusinessMetadata(Base):
@@ -134,7 +135,7 @@ class BusinessMetadata(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
-    # 🟢 Relationship to User
+    # Relationship to User
     owner = relationship(
         "User", 
         back_populates="business_metadata",
@@ -142,7 +143,7 @@ class BusinessMetadata(Base):
         foreign_keys=[owner_id]
     )
     
-    # 🟢 FIXED: Relationship to UserSettings using viewonly
+    # Relationship to UserSettings using viewonly
     user_settings = relationship(
         "UserSettings",
         primaryjoin="BusinessMetadata.owner_id == UserSettings.user_id",
@@ -152,6 +153,9 @@ class BusinessMetadata(Base):
     
     # API Keys relationship
     api_keys = relationship("ApiKey", back_populates="business", cascade="all, delete-orphan")
+    
+    def __repr__(self):
+        return f"<BusinessMetadata owner_id={self.owner_id} company={self.company_name}>"
 
 
 class PlatformConfig(Base):
@@ -183,6 +187,9 @@ class PlatformConfig(Base):
     maintenance_message = Column(String, default="System undergoing scheduled maintenance.")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    
+    def __repr__(self):
+        return f"<PlatformConfig id={self.id} fee={self.platform_fee_percent}%>"
 
 
 class BroadcastMessage(Base):
@@ -207,6 +214,10 @@ class BroadcastMessage(Base):
     action_text = Column(String, nullable=True)
     
     creator = relationship("UserSettings", foreign_keys=[created_by])
+    
+    def __repr__(self):
+        return f"<BroadcastMessage id={self.id} title={self.title} active={self.active}>"
+
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
@@ -227,34 +238,61 @@ class AuditLog(Base):
     status = Column(String, default="success")
     log_metadata = Column(JSON, default={})
     
-    # 🟢 Relationship to User
+    # Relationship to User
     user_rel_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     user_rel = relationship(
         "User", 
         back_populates="audit_logs",
         foreign_keys=[user_rel_id]
     )
+    
+    def __repr__(self):
+        return f"<AuditLog id={self.id} user={self.user} action={self.action} timestamp={self.timestamp}>"
 
-# Indexes - Define each index only once
+
+# ==================== INDEXES ====================
+# Define indexes only once here for better organization
+
+# AuditLog indexes
 Index('ix_audit_logs_timestamp_desc', AuditLog.timestamp.desc())
 Index('ix_audit_logs_user_action', AuditLog.user, AuditLog.action)
 Index('ix_audit_logs_resource', AuditLog.resource_type, AuditLog.resource_id)
 Index('ix_audit_logs_user_id', AuditLog.user_id)
+Index('ix_audit_logs_action_status', AuditLog.action, AuditLog.status)
 
+# BroadcastMessage indexes
 Index('ix_broadcast_active_expires', BroadcastMessage.active, BroadcastMessage.expires_at)
 Index('ix_broadcast_target_role', BroadcastMessage.target_role)
+Index('ix_broadcast_created_at', BroadcastMessage.created_at.desc())
 
-# Notification indexes - only define if Notification is available
+# Business metadata indexes
+Index('ix_business_owner', BusinessMetadata.owner_id)
+Index('ix_business_verified', BusinessMetadata.verified)
+
+# UserSettings indexes
+Index('ix_user_settings_user_id', UserSettings.user_id, unique=True)
+Index('ix_user_settings_username', UserSettings.username)
+Index('ix_user_settings_kyc_status', UserSettings.kyc_status)
+Index('ix_user_settings_payout_method', UserSettings.payout_method)
+
+# PlatformConfig indexes
+Index('ix_platform_config_maintenance', PlatformConfig.maintenance_mode)
+
+# Notification indexes (if Notification model exists)
 try:
     from app.models.notification import Notification
     Index('ix_notifications_user_unread', Notification.operator_id, Notification.is_read)
     Index('ix_notifications_created_desc', Notification.created_at.desc())
+    Index('ix_notifications_user_priority', Notification.operator_id, Notification.priority)
 except ImportError:
     pass
 
-# Business metadata index
-Index('ix_business_owner', BusinessMetadata.owner_id)
 
-# UserSettings indexes - defined ONCE here (not in the column definitions)
-Index('ix_user_settings_user_id', UserSettings.user_id, unique=True)  # Unique index
-Index('ix_user_settings_username', UserSettings.username)  # Regular index
+# ==================== EXPORTS ====================
+__all__ = [
+    "UserSettings",
+    "BusinessMetadata", 
+    "PlatformConfig",
+    "BroadcastMessage",
+    "AuditLog"
+]

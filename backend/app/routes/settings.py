@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Body, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import select, update, delete
 from typing import Dict, Any, List, Optional
 import logging
+import os
+import uuid
+from pathlib import Path
 from datetime import datetime
 
 from app.models.settings import UserSettings, AuditLog
@@ -10,8 +13,14 @@ from app.models.user import User
 from app.schemas.settings import SovereignSyncResponse
 from app.database import get_db
 from app.routes.auth import get_current_user
+from app.core.security import hash_password, verify_password
 
 router = APIRouter(tags=["User Settings"])
+
+# ==================== CONFIGURATION ====================
+
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
 # ==================== USER SETTINGS ROUTES ====================
 
@@ -20,7 +29,7 @@ async def sync_user_settings(
     current_user: dict = Depends(get_current_user), 
     db: Session = Depends(get_db)
 ):
-    """Sync all user settings and preferences"""
+    """Sync all user settings and preferences - NO recovery phrase"""
     user_id = current_user["operator_id"] 
     db_id = current_user["id"]
     role = current_user.get("role", "USER").upper()
@@ -204,18 +213,6 @@ async def update_setting(
         logging.error(f"Settings update failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to update setting")
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
-import os
-import uuid
-from pathlib import Path
-
-# ... existing imports ...
-
-ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
-MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
-
 @router.post("/upload-avatar")
 async def upload_avatar(
     file: UploadFile = File(...),
@@ -257,11 +254,9 @@ async def upload_avatar(
         f.write(contents)
     
     # Build URL - in production, use cloud storage URL
-    # For now, use a relative path that can be served statically
     avatar_url = f"/uploads/avatars/{unique_filename}"
     
     # Update user's avatar in database
-    from app.models.user import User
     user = db.query(User).filter(User.operator_id == current_user["operator_id"]).first()
     if user:
         user.avatar_url = avatar_url
@@ -341,7 +336,7 @@ async def change_password(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Change user password"""
+    """Change user password - NO recovery phrase needed"""
     current_password = passwords.get("current_password")
     new_password = passwords.get("new_password")
     confirm_password = passwords.get("confirm_password")
@@ -352,11 +347,33 @@ async def change_password(
     if new_password != confirm_password:
         raise HTTPException(status_code=400, detail="New passwords do not match")
     
-    # Verify current password (implement with your auth logic)
-    # This would typically check against your auth system
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
     
-    # Update password (implement with your auth logic)
-    # This would hash and store the new password
+    # Get user from database
+    user = db.query(User).filter(User.operator_id == current_user["operator_id"]).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify current password
+    if not verify_password(current_password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+    
+    # Update to new password
+    user.hashed_password = hash_password(new_password)
+    db.commit()
+    
+    # Create audit log
+    audit_log = AuditLog(
+        user=current_user.get("full_name", "User"),
+        action="PASSWORD_CHANGE",
+        path="security.password",
+        old_value="[REDACTED]",
+        new_value="[REDACTED]",
+        ip_address="127.0.0.1"
+    )
+    db.add(audit_log)
+    db.commit()
     
     return {"status": "success", "message": "Password updated successfully"}
 
@@ -366,21 +383,36 @@ async def enable_two_factor(
 ):
     """Enable two-factor authentication"""
     # Generate and return 2FA secret
-    # Implement with your 2FA solution (e.g., pyotp)
+    import pyotp
+    
+    secret = pyotp.random_base32()
+    totp = pyotp.TOTP(secret)
+    provisioning_uri = totp.provisioning_uri(
+        name=current_user["email"], 
+        issuer_name="Klip"
+    )
+    
+    # Generate QR code URI
+    qr_code_uri = f"otpauth://totp/Klip:{current_user['email']}?secret={secret}&issuer=Klip"
+    
     return {
-        "secret": "JBSWY3DPEHPK3PXP",
-        "qr_code": "data:image/png;base64,..."
+        "secret": secret,
+        "qr_code_uri": qr_code_uri,
+        "provisioning_uri": provisioning_uri
     }
 
 @router.post("/verify-2fa")
 async def verify_two_factor(
     code: str = Body(..., embed=True),
+    secret: str = Body(..., embed=True),
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Verify and enable 2FA"""
-    # Verify the code (implement with your 2FA solution)
-    is_valid = True  # Replace with actual verification
+    import pyotp
+    
+    totp = pyotp.TOTP(secret)
+    is_valid = totp.verify(code)
     
     if not is_valid:
         raise HTTPException(status_code=400, detail="Invalid verification code")
@@ -393,6 +425,7 @@ async def verify_two_factor(
     
     if settings:
         settings.mfa_enabled = True
+        settings.mfa_secret = secret
         db.commit()
     
     return {"status": "success", "message": "2FA enabled successfully"}
@@ -411,6 +444,7 @@ async def disable_two_factor(
     
     if settings:
         settings.mfa_enabled = False
+        settings.mfa_secret = None
         db.commit()
     
     return {"status": "success", "message": "2FA disabled successfully"}
@@ -420,12 +454,12 @@ async def get_active_sessions(
     current_user: dict = Depends(get_current_user)
 ):
     """Get active user sessions"""
-    # Implement with your session management
+    # TODO: Implement with your session management
     return [
         {
             "id": "session_1",
-            "device": "Chrome on Windows",
-            "location": "Nairobi, Kenya",
+            "device": "Current Session",
+            "location": "Current Location",
             "last_active": datetime.utcnow().isoformat(),
             "current": True
         }
@@ -436,5 +470,17 @@ async def revoke_all_sessions(
     current_user: dict = Depends(get_current_user)
 ):
     """Revoke all other active sessions"""
-    # Implement with your session management
+    # TODO: Implement with your session management (e.g., token blacklisting)
     return {"status": "success", "message": "All other sessions revoked"}
+
+@router.get("/recovery-options")
+async def get_recovery_options(
+    current_user: dict = Depends(get_current_user)
+):
+    """Get account recovery options - Simple email-based recovery only"""
+    return {
+        "recovery_methods": ["email"],
+        "email": current_user.get("email"),
+        "supports_2fa": True,
+        "info": "Account recovery is done via email verification only"
+    }

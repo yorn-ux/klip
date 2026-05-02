@@ -150,7 +150,7 @@ class User(Base):
         foreign_keys="[AuditLog.user_rel_id]"
     )
     
-    # 9. 🆕 Disputes (as initiator and counterparty)
+    # 9. Disputes (as initiator and counterparty)
     disputes_initiated = relationship(
         "Dispute",
         back_populates="initiator",
@@ -167,7 +167,7 @@ class User(Base):
         cascade="all, delete-orphan"
     )
     
-    # 10. 🆕 Support Tickets
+    # 10. Support Tickets
     support_tickets = relationship(
         "SupportTicket",
         back_populates="user",
@@ -176,7 +176,7 @@ class User(Base):
         cascade="all, delete-orphan"
     )
     
-    # 11. 🆕 Campaigns (as business owner)
+    # 11. Campaigns (as business owner)
     campaigns = relationship(
         "Campaign",
         back_populates="business",
@@ -185,7 +185,7 @@ class User(Base):
         cascade="all, delete-orphan"
     )
     
-    # 12. 🆕 Campaign Applications (as applicant)
+    # 12. Campaign Applications (as applicant)
     campaign_applications = relationship(
         "Application",
         back_populates="applicant",

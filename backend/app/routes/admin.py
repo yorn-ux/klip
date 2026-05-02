@@ -494,6 +494,7 @@ async def delete_broadcast(
         raise HTTPException(status_code=500, detail="Failed to delete broadcast")
 
 # ==================== AUDIT LOGS ENDPOINTS ====================
+
 @router.get("/audit-logs")
 async def get_audit_logs(
     limit: int = Query(100, ge=1, le=1000),
@@ -632,6 +633,7 @@ async def export_audit_logs(
     except Exception as e:
         logging.error(f"Failed to export audit logs: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to export audit logs")
+
 @router.get("/audit-logs/by-role/{role}")
 async def get_audit_logs_by_role(
     role: str,
@@ -696,7 +698,7 @@ async def get_audit_logs_by_role(
     except Exception as e:
         logging.error(f"Failed to fetch audit logs by role: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to fetch audit logs")
-        
+
 @router.get("/audit-logs/summary")
 async def get_audit_logs_summary(
     current_user: dict = Depends(verify_admin),
@@ -756,6 +758,7 @@ async def get_audit_logs_summary(
             },
             "timestamp": datetime.now().isoformat()
         }
+
 # Debug endpoint to check raw data
 @router.get("/audit-logs/debug")
 async def debug_audit_logs(
@@ -814,16 +817,6 @@ async def debug_audit_logs(
         return {"error": str(e)}
 
 # ==================== SYSTEM STATUS ENDPOINTS ====================
-import psutil
-import platform
-import os
-import time
-from datetime import datetime, timedelta
-from sqlalchemy import text
-import logging
-
-# ===== SERVER / HOST SYSTEM MONITORING =====
-# These endpoints check the actual server where your FastAPI app runs
 
 @router.get("/system-status")
 async def get_system_status(
@@ -1246,9 +1239,7 @@ async def get_storage_usage(
             "timestamp": datetime.now().isoformat()
         }
 
-
-# ===== DATABASE STORAGE MONITORING =====
-# These endpoints check your actual PostgreSQL database storage
+# ==================== DATABASE STORAGE MONITORING ====================
 
 @router.get("/system/database-storage")
 async def get_database_storage(
@@ -1458,6 +1449,7 @@ async def db_ping(
             "error": str(e),
             "timestamp": datetime.now().isoformat()
         }
+
 # ==================== OPERATOR LEDGER ENDPOINTS ====================
 
 @router.get("/operators")
@@ -2395,5 +2387,3 @@ async def get_payment_metrics(
             "crypto": {"total_transactions": 0, "successful": 0, "failed": 0, "success_rate": 0, "total_settled": 0},
             "card": {"total_transactions": 0, "successful": 0, "failed": 0, "success_rate": 0, "total_settled": 0}
         }
-    
-    # End of payment metrics endpoint

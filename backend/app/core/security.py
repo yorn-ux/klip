@@ -19,15 +19,18 @@ pwd_context = CryptContext(
 
 # --- PASSWORD LOGIC ---
 def hash_password(password: str) -> str:
+    """Hash a password using PBKDF2-SHA256"""
     return pwd_context.hash(password)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against its hash"""
     return pwd_context.verify(plain_password, hashed_password)
 
 # --- JWT TOKEN LOGIC ---
 def create_access_token(
     subject: Union[str, Any], 
-    expires_delta: Optional[timedelta] = None
+    expires_delta: Optional[timedelta] = None,
+    additional_claims: Optional[Dict[str, Any]] = None
 ) -> str:
     """
     Create a JWT access token.
@@ -36,6 +39,7 @@ def create_access_token(
         subject: The user identifier (usually email)
         expires_delta: Optional custom expiration time. If not provided,
                       uses ACCESS_TOKEN_EXPIRE_MINUTES from config.
+        additional_claims: Optional additional claims to include in token
     
     Returns:
         Encoded JWT token string
@@ -51,6 +55,10 @@ def create_access_token(
         "iat": datetime.now(timezone.utc), 
         "type": "access"
     }
+    
+    if additional_claims:
+        to_encode.update(additional_claims)
+    
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 def create_security_token(email: str) -> str:
@@ -60,11 +68,31 @@ def create_security_token(email: str) -> str:
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
+    """Decode and validate a JWT token"""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except JWTError:
         return None
+
+def verify_token_expiration(payload: Dict[str, Any]) -> bool:
+    """Check if token is expired"""
+    exp = payload.get("exp")
+    if exp and datetime.fromtimestamp(exp, tz=timezone.utc) < datetime.now(timezone.utc):
+        return False
+    return True
+
+# --- OPERATOR ID GENERATION (NO RECOVERY PHRASE) ---
+def generate_operator_id() -> str:
+    """
+    Generate a unique operator ID for users.
+    Format: OP-YYYYMMDD-XXXXXX (where X is alphanumeric)
+    Example: OP-20260502-ABC123
+    """
+    date_part = datetime.now(timezone.utc).strftime('%Y%m%d')
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # Removed confusing chars: I, O, 0, 1
+    random_part = ''.join(secrets.choice(alphabet) for _ in range(6))
+    return f"OP-{date_part}-{random_part}"
 
 # --- SECURITY ALERT FUNCTION ---
 async def send_security_alert(
@@ -81,7 +109,6 @@ async def send_security_alert(
         token = create_security_token(to_email)
         
         # 2. Get the Base URL from .env (fallback to APP_URL for production)
-        # In production (Render), BACKEND_URL should be set as environment variable
         environment = os.getenv("ENVIRONMENT", "development").lower()
         base_url = os.getenv("BACKEND_URL")
         
@@ -92,14 +119,14 @@ async def send_security_alert(
                 base_url = os.getenv("APP_URL", "")
                 if not base_url:
                     # Last resort fallback - this should be set in Render dashboard
-                    base_url = "https://klip.onrender.com"
+                    base_url = "https://klip-wtx9.onrender.com"
             else:
                 base_url = "http://localhost:8000"
         
         base_url = base_url.rstrip("/")
         
         # 3. Construct the link using the dynamic base
-        lock_link = f"{base_url}/auth/lock-account/{token}"
+        lock_link = f"{base_url}/api/v1/auth/lock-account/{token}"
         
         # 4. Print to console for development visibility
         print("\n" + "!"*60)
@@ -109,7 +136,7 @@ async def send_security_alert(
         print(f"🔒 LOCK LINK: {lock_link}")
         print("!"*60 + "\n")
         
-        # 5. TODO: Add email sending logic here using your Resend service
+        # 5. TODO: Add email sending logic here using your email service
         # from app.services.email import send_security_alert_email
         # await send_security_alert_email(to_email, ip_address, user_agent, lock_link)
         
@@ -118,30 +145,37 @@ async def send_security_alert(
         print(f"Error sending security alert: {e}")
         return False
 
-# --- KLIP IDENTITY GENERATION ---
-def generate_recovery_phrase() -> str:
-    WORD_POOL = [
-        "enclave", "shield", "vault", "matrix", "secure", "proxy", "guard", "protocol",
-        "cipher", "vertex", "beacon", "kernel", "atomic", "binary", "static", "nexus",
-        "tunnel", "quartz", "shadow", "legacy", "vector", "orbit", "plasma", "carbon",
-        "stable", "active", "hybrid", "purity", "wisdom", "silent", "frozen", "planet",
-        "alpha", "bravo", "delta", "echo", "foxtrot", "gamma", "hazard", "iron",
-        "jupiter", "knight", "lambda", "mercury", "neon", "omega", "phantom", "quantum",
-        "radar", "sigma", "titan", "ultra", "vortex", "winter", "xray", "yield",
-        "zenith", "aspect", "bronze", "cannon", "divide", "entropy", "fossil", "gravity",
-        "hollow", "index", "jungle", "kilo", "linear", "metric", "neutral", "ocean",
-        "pulse", "river", "solar", "target", "unit", "valve", "whale",
-        "axis", "bonus", "cloud", "direct", "eagle", "flow", "gear", "hope",
-        "input", "joint", "key", "logic", "metal", "node", "open", "pixel",
-        "relay", "sensor", "trace", "update", "voice", "wire", "zone", "anchor",
-        "blast", "core", "drift", "entry", "flash", "grid", "humor", "image",
-        "jump", "kind", "layer", "mesh", "net", "object", "path", "rigid",
-        "shift", "task", "under", "view", "wave", "zero", "alert", "backup"
-    ]
-    return " ".join(secrets.choice(WORD_POOL) for _ in range(12))
+# --- HELPER FUNCTIONS ---
+def generate_verification_code() -> str:
+    """Generate a 6-digit verification code for email verification"""
+    return ''.join([str(secrets.randbelow(10)) for _ in range(6)])
 
-def generate_operator_id() -> str:
-    date_part = datetime.now(timezone.utc).strftime('%Y%m%d')
-    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-    random_part = ''.join(secrets.choice(alphabet) for _ in range(6))
-    return f"OP-{date_part}-{random_part}"
+def is_token_expired(exp_timestamp: int) -> bool:
+    """Check if a token has expired based on its expiration timestamp"""
+    return datetime.fromtimestamp(exp_timestamp, tz=timezone.utc) < datetime.now(timezone.utc)
+
+def get_token_expiration_date(expires_minutes: int = ACCESS_TOKEN_EXPIRE_MINUTES) -> datetime:
+    """Get the expiration datetime for a new token"""
+    return datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
+
+# --- REMOVED FUNCTIONS ---
+# generate_recovery_phrase() - COMPLETELY REMOVED - No mnemonic/recovery system
+# Any other recovery-related functions are removed
+
+# Export all public functions
+__all__ = [
+    "hash_password",
+    "verify_password",
+    "create_access_token",
+    "create_security_token",
+    "decode_access_token",
+    "verify_token_expiration",
+    "generate_operator_id",
+    "send_security_alert",
+    "generate_verification_code",
+    "is_token_expired",
+    "get_token_expiration_date",
+    "SECRET_KEY",
+    "ALGORITHM",
+    "ACCESS_TOKEN_EXPIRE_MINUTES",
+]

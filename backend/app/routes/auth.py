@@ -76,9 +76,11 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)) -> d
         "id": user.id,
         "operator_id": user.operator_id,
         "email": user.email,
+        "sub": user.email,  # Added for consistency with token payload
         "full_name": user.full_name,
         "role": user.role.value if hasattr(user.role, 'value') else user.role,
         "is_verified": user.is_verified,
+        "is_active": user.is_active,
         "kyc_status": getattr(user, 'kyc_status', 'UNVERIFIED'),
         "kyc_notes": getattr(user, 'kyc_notes', 'Documentation requires review.')
     }
@@ -254,7 +256,7 @@ async def register(
             }
         raise HTTPException(status_code=400, detail="Identity already registered.")
 
-    # New Identity Creation
+    # New Identity Creation - NO recovery_hash anywhere!
     should_bypass = True if (is_root_admin or is_privileged_enroller) else False
     op_id = generate_operator_id()
     otp = "".join([str(secrets.randbelow(10)) for _ in range(6)]) if not should_bypass else None
@@ -268,6 +270,7 @@ async def register(
         is_active=True,
         is_verified=should_bypass,
         verification_code=otp,
+        verification_code_expires=datetime.now(timezone.utc) + timedelta(hours=24) if otp else None,
         enrolled_by=enroller_identity,
         enrolled_at=func.now() if should_bypass else None
     )
@@ -340,6 +343,7 @@ async def login(
         if not user.verification_code:
             otp = "".join([str(secrets.randbelow(10)) for _ in range(6)])
             user.verification_code = otp
+            user.verification_code_expires = datetime.now(timezone.utc) + timedelta(hours=24)
             db.commit()
             background_tasks.add_task(send_verification_email, user.email, otp, user.full_name)
         
@@ -424,9 +428,14 @@ async def verify_email(
 
     if not user.verification_code or user.verification_code != payload.code:
         raise HTTPException(status_code=400, detail="Invalid verification code.")
+    
+    # Check if verification code expired
+    if user.verification_code_expires and user.verification_code_expires < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Verification code expired. Please request a new one.")
 
     user.is_verified = True
-    user.verification_code = None 
+    user.verification_code = None
+    user.verification_code_expires = None
     db.commit()
     
     # Create verification success notification
@@ -475,6 +484,7 @@ async def resend_verification(
     # Generate new OTP
     otp = "".join([str(secrets.randbelow(10)) for _ in range(6)])
     user.verification_code = otp
+    user.verification_code_expires = datetime.now(timezone.utc) + timedelta(hours=24)
     db.commit()
     
     background_tasks.add_task(send_verification_email, email, otp, user.full_name)
@@ -598,7 +608,7 @@ async def self_lock_account(
     db: Session = Depends(get_db)
 ):
     """Allow users to lock their own account"""
-    user = db.query(User).filter(User.email == current_user["sub"]).first()
+    user = db.query(User).filter(User.email == current_user["email"]).first()  # Fixed: use email not sub
     
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

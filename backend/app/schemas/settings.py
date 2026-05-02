@@ -1,13 +1,13 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 # ==================== USER SETTINGS SCHEMAS ====================
 
 class ProfileData(BaseModel):
-    """User profile information"""
+    """User profile information - NO recovery phrase"""
     node_id: Optional[str] = None
     name: Optional[str] = None
     full_name: Optional[str] = None
@@ -35,11 +35,11 @@ class ProfileData(BaseModel):
 
 class PaymentData(BaseModel):
     """User payment settings"""
-    paypal_email: Optional[str] = None
+    paypal_email: Optional[EmailStr] = None
     crypto_address: Optional[str] = None
     payout_method: Optional[str] = "paypal"
-    min_threshold: Optional[float] = 1000.0
-    min_payout_threshold: Optional[float] = 1000.0
+    min_threshold: Optional[float] = Field(1000.0, ge=0)
+    min_payout_threshold: Optional[float] = Field(1000.0, ge=0)
     auto_withdraw: Optional[bool] = False
     currency: Optional[str] = "KES"
     
@@ -48,7 +48,7 @@ class PaymentData(BaseModel):
 
 class VaultData(BaseModel):
     """User vault preferences"""
-    auto_release_days: Optional[int] = 7
+    auto_release_days: Optional[int] = Field(7, ge=1, le=90)
     require_contract: Optional[bool] = False
     email_notifications: Optional[bool] = True
     sms_alerts: Optional[bool] = False
@@ -85,7 +85,7 @@ class CompanyData(BaseModel):
     reg_number: Optional[str] = None
     tax_id: Optional[str] = None
     billing_address: Optional[str] = None
-    business_email: Optional[str] = None
+    business_email: Optional[EmailStr] = None
     business_phone: Optional[str] = None
     website: Optional[str] = None
     country: Optional[str] = "Kenya"
@@ -101,7 +101,7 @@ class CompanyData(BaseModel):
     description: Optional[str] = None
     
     # Financial Settings
-    monthly_budget_limit: Optional[float] = 1000000.0
+    monthly_budget_limit: Optional[float] = Field(1000000.0, ge=0)
     dual_approval_required: Optional[bool] = True
     
     # Team (simplified for response)
@@ -115,9 +115,9 @@ class CompanyData(BaseModel):
 
 class FinancialData(BaseModel):
     """Business financial settings"""
-    monthly_budget_limit: Optional[float] = 1000000.0
+    monthly_budget_limit: Optional[float] = Field(1000000.0, ge=0)
     dual_approval_required: Optional[bool] = True
-    min_payout_threshold: Optional[float] = 5000.0
+    min_payout_threshold: Optional[float] = Field(5000.0, ge=0)
     payout_method: Optional[str] = "M-Pesa"
     payout_account: Optional[str] = None
     auto_withdraw: Optional[bool] = False
@@ -127,10 +127,10 @@ class FinancialData(BaseModel):
 
 
 class TeamMember(BaseModel):
-    """Team member information"""
+    """Team member information - NO recovery phrase"""
     operator_id: str
     full_name: Optional[str] = None
-    email: str
+    email: EmailStr
     role: str
     permissions: Optional[List[str]] = Field(default_factory=list)
     is_active: bool = True
@@ -190,7 +190,7 @@ class TeamSuspendRequest(BaseModel):
 
 class KeyCreate(BaseModel):
     """Create a new API key"""
-    name: str
+    name: str = Field(..., min_length=1, max_length=100)
     permissions: Optional[List[str]] = Field(default_factory=list)
     
     model_config = ConfigDict(from_attributes=True)
@@ -319,11 +319,11 @@ class SettingsUpdate(BaseModel):
 
 class ProfileUpdate(BaseModel):
     """Update user profile"""
-    name: Optional[str] = None
-    username: Optional[str] = None
-    bio: Optional[str] = None
-    location: Optional[str] = None
-    phone: Optional[str] = None
+    name: Optional[str] = Field(None, max_length=100)
+    username: Optional[str] = Field(None, max_length=50)
+    bio: Optional[str] = Field(None, max_length=500)
+    location: Optional[str] = Field(None, max_length=200)
+    phone: Optional[str] = Field(None, max_length=20)
     is_public: Optional[bool] = None
     country: Optional[str] = None
     
@@ -332,40 +332,40 @@ class ProfileUpdate(BaseModel):
 
 class SocialLinksUpdate(BaseModel):
     """Update social media links"""
-    instagram: Optional[str] = None
-    twitter: Optional[str] = None
-    youtube: Optional[str] = None
-    tiktok: Optional[str] = None
+    instagram: Optional[str] = Field(None, max_length=100)
+    twitter: Optional[str] = Field(None, max_length=100)
+    youtube: Optional[str] = Field(None, max_length=100)
+    tiktok: Optional[str] = Field(None, max_length=100)
     
     model_config = ConfigDict(from_attributes=True)
 
 
 class BusinessProfileUpdate(BaseModel):
     """Update business profile"""
-    company_name: Optional[str] = None
-    reg_number: Optional[str] = None
-    tax_id: Optional[str] = None
+    company_name: Optional[str] = Field(None, max_length=200)
+    reg_number: Optional[str] = Field(None, max_length=50)
+    tax_id: Optional[str] = Field(None, max_length=50)
     billing_address: Optional[str] = None
-    business_phone: Optional[str] = None
-    website: Optional[str] = None
+    business_phone: Optional[str] = Field(None, max_length=20)
+    website: Optional[str] = Field(None, max_length=200)
     country: Optional[str] = None
     city: Optional[str] = None
-    postal_code: Optional[str] = None
+    postal_code: Optional[str] = Field(None, max_length=20)
     business_type: Optional[str] = None
     industry: Optional[str] = None
     year_established: Optional[str] = None
     employee_count: Optional[str] = None
     logo_url: Optional[str] = None
-    description: Optional[str] = None
+    description: Optional[str] = Field(None, max_length=1000)
     
     model_config = ConfigDict(from_attributes=True)
 
 
 class FinancialSettingsUpdate(BaseModel):
     """Update financial settings"""
-    monthly_budget_limit: Optional[float] = None
+    monthly_budget_limit: Optional[float] = Field(None, ge=0)
     dual_approval_required: Optional[bool] = None
-    min_payout_threshold: Optional[float] = None
+    min_payout_threshold: Optional[float] = Field(None, ge=0)
     payout_method: Optional[str] = None
     payout_account: Optional[str] = None
     auto_withdraw: Optional[bool] = None
@@ -377,13 +377,14 @@ class FinancialSettingsUpdate(BaseModel):
 # ==================== SECURITY SCHEMAS ====================
 
 class PasswordChange(BaseModel):
-    """Change password request"""
-    current_password: str
-    new_password: str
-    confirm_password: str
+    """Change password request - NO recovery phrase needed"""
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8)
+    confirm_password: str = Field(..., min_length=8)
     
-    @validator('new_password')
-    def password_strength(cls, v):
+    @field_validator('new_password')
+    @classmethod
+    def password_strength(cls, v: str) -> str:
         if len(v) < 8:
             raise ValueError('Password must be at least 8 characters')
         if not any(c.isupper() for c in v):
@@ -394,9 +395,10 @@ class PasswordChange(BaseModel):
             raise ValueError('Password must contain at least one number')
         return v
     
-    @validator('confirm_password')
-    def passwords_match(cls, v, values, **kwargs):
-        if 'new_password' in values and v != values['new_password']:
+    @field_validator('confirm_password')
+    @classmethod
+    def passwords_match(cls, v: str, info) -> str:
+        if 'new_password' in info.data and v != info.data['new_password']:
             raise ValueError('Passwords do not match')
         return v
     
@@ -406,17 +408,20 @@ class PasswordChange(BaseModel):
 class TwoFactorSetup(BaseModel):
     """2FA setup response"""
     secret: str
-    qr_code: str
+    qr_code_uri: str
+    provisioning_uri: str
     
     model_config = ConfigDict(from_attributes=True)
 
 
 class TwoFactorVerify(BaseModel):
     """Verify 2FA code"""
-    code: str
+    code: str = Field(..., pattern=r'^\d{6}$', description="6-digit verification code")
+    secret: str = Field(..., description="2FA secret from setup")
     
-    @validator('code')
-    def code_format(cls, v):
+    @field_validator('code')
+    @classmethod
+    def code_format(cls, v: str) -> str:
         if not v.isdigit() or len(v) != 6:
             raise ValueError('Code must be 6 digits')
         return v
@@ -440,6 +445,7 @@ class SessionInfo(BaseModel):
 class AvatarResponse(BaseModel):
     """Avatar upload response"""
     url: str
+    message: str = "Avatar uploaded successfully"
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -464,6 +470,7 @@ class AuditLogResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     """Error response"""
+    success: bool = False
     detail: str
     status_code: int
     
@@ -480,3 +487,55 @@ class SuccessResponse(BaseModel):
     
     model_config = ConfigDict(from_attributes=True)
 
+
+# ==================== RECOVERY OPTIONS (EMAIL ONLY) ====================
+
+class RecoveryOptionsResponse(BaseModel):
+    """Account recovery options - Simple email-based recovery only"""
+    recovery_methods: List[str] = ["email"]
+    email: EmailStr
+    supports_2fa: bool = True
+    info: str = "Account recovery is done via email verification only"
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ==================== EXPORTS ====================
+
+__all__ = [
+    "ProfileData",
+    "PaymentData", 
+    "VaultData",
+    "NotificationPreferences",
+    "KYCData",
+    "CompanyData",
+    "FinancialData",
+    "TeamMember",
+    "TeamInvite",
+    "TeamMemberUpdate",
+    "TeamRoleUpdate",
+    "TeamSuspendRequest",
+    "KeyCreate",
+    "KeyResponse",
+    "NewKeyResponse",
+    "AnalyticsResponse",
+    "LedgerResponse",
+    "UserSettingsResponse",
+    "BusinessSettingsResponse",
+    "SovereignSyncPayload",
+    "SovereignSyncResponse",
+    "SettingsUpdate",
+    "ProfileUpdate",
+    "SocialLinksUpdate",
+    "BusinessProfileUpdate",
+    "FinancialSettingsUpdate",
+    "PasswordChange",
+    "TwoFactorSetup",
+    "TwoFactorVerify",
+    "SessionInfo",
+    "AvatarResponse",
+    "AuditLogResponse",
+    "ErrorResponse",
+    "SuccessResponse",
+    "RecoveryOptionsResponse",
+]

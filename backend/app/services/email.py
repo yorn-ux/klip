@@ -17,7 +17,7 @@ class KlipEmailService:
         self.api_key = os.getenv("RESEND_API_KEY")
         self.from_email = os.getenv("RESEND_FROM_EMAIL")
         self.from_name = os.getenv("RESEND_FROM_NAME", "Klip Security")
-        self.reply_to = os.getenv("RESEND_REPLY_TO")
+        self.reply_to = os.getenv("RESEND_REPLY_TO", "support@klip.com")
         
         # Critical: These MUST come from .env
         self.frontend_url = os.getenv("FRONTEND_URL")
@@ -26,12 +26,11 @@ class KlipEmailService:
         # For production, use APP_URL as fallback if BACKEND_URL not set
         environment = os.getenv("ENVIRONMENT", "development").lower()
         if not self.backend_url and environment == "production":
-            self.backend_url = os.getenv("APP_URL", "https://klip.onrender.com")
+            self.backend_url = os.getenv("APP_URL", "https://klip-wtx9.onrender.com")
         elif not self.backend_url:
             self.backend_url = "http://localhost:8000"
 
         # Validate required environment variables
-        # Note: BACKEND_URL has a fallback, so we only warn about it
         missing_vars = []
         if not self.api_key:
             missing_vars.append("RESEND_API_KEY")
@@ -39,11 +38,9 @@ class KlipEmailService:
             missing_vars.append("RESEND_FROM_EMAIL")
         if not self.frontend_url:
             missing_vars.append("FRONTEND_URL")
-        if not self.backend_url:
-            logger.warning("BACKEND_URL not set - using fallback (check in production!)")
 
         self.enabled = False
-        if self.api_key and self.from_email and self.frontend_url and self.backend_url:
+        if self.api_key and self.from_email and self.frontend_url:
             try:
                 import resend
                 resend.api_key = self.api_key
@@ -54,7 +51,10 @@ class KlipEmailService:
             except ImportError:
                 logger.error("❌ Critical: 'resend' python library not installed. Run 'pip install resend'")
         else:
-            logger.error(f"❌ Email Service Disabled - Missing environment variables: {', '.join(missing_vars)}")
+            if missing_vars:
+                logger.error(f"❌ Email Service Disabled - Missing environment variables: {', '.join(missing_vars)}")
+            else:
+                logger.info("📧 Email service configured but disabled for this environment")
 
     async def _get_geo_context(self, ip: str) -> str:
         """Translates boring IP addresses into real city/country names."""
@@ -71,7 +71,7 @@ class KlipEmailService:
         return "A new device"
 
     def _get_html_wrapper(self, content: str) -> str:
-        """The master design template with Klip branding."""
+        """The master design template with Klip branding - NO recovery phrase mentions"""
         year = datetime.now(timezone.utc).year
         return f"""
         <!DOCTYPE html>
@@ -159,7 +159,7 @@ class KlipEmailService:
                                     <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 600;">&copy; {year} Klip. All rights reserved.</p>
                                     <p style="margin: 8px 0 0 0; font-size: 11px; color: #94a3b8; line-height: 1.4;">
                                         This is a secure automated message from Klip.<br>
-                                        Never share your recovery phrase or login credentials.
+                                        Never share your password or verification codes with anyone.
                                     </p>
                                 </td>
                             </tr>
@@ -183,17 +183,17 @@ class KlipEmailService:
         content = f"""
             <div style="text-align: center;">
                 <h2 style="font-size: 22px; color: #0f172a; margin-top: 0; font-weight: 800;">Verify Your Identity</h2>
-                <p style="font-size: 16px; color: #475569;">Hello {full_name}, use the code below to complete your sign-in.</p>
+                <p style="font-size: 16px; color: #475569;">Hello {full_name}, use the code below to complete your registration.</p>
                 <div style="background: #f8fafc; border: 2px solid #f43f5e; padding: 30px; border-radius: 16px; margin: 30px 0;">
                     <span style="font-family: 'Courier New', monospace; font-size: 40px; font-weight: 900; color: #0f172a; letter-spacing: 10px;">{code}</span>
                 </div>
-                <p style="font-size: 13px; color: #94a3b8;">This code expires in 5 minutes for your security.</p>
+                <p style="font-size: 13px; color: #94a3b8;">This code expires in 24 hours for your security.</p>
             </div>
         """
         return self._send_email(to_email, subject, self._get_html_wrapper(content))
 
     def send_welcome_email(self, to_email: str, full_name: str = "Friend") -> bool:
-        """Send welcome email after successful verification"""
+        """Send welcome email after successful verification - NO recovery phrase"""
         if not self.enabled:
             logger.warning(f"📧 [TEST MODE] Welcome email to: {to_email}")
             return False
@@ -203,13 +203,18 @@ class KlipEmailService:
             <h2 style="font-size: 22px; color: #0f172a; margin-top: 0; font-weight: 800;">Welcome Aboard, {full_name}!</h2>
             <p style="font-size: 16px; color: #475569;">Your account has been successfully verified. You're now part of the Klip network.</p>
             
-            <div style="background: #fff1f2; border-left: 4px solid #f43f5e; padding: 20px; border-radius: 8px; margin: 25px 0;">
-                <p style="margin: 0; font-size: 14px; color: #9f1239; font-weight: 800;">⚠️ Critical Security Reminder:</p>
-                <p style="margin: 5px 0 0 0; font-size: 14px; color: #be123c;">Your 12-word recovery phrase is the ONLY way to recover your account. Store it offline, never share it, and never enter it online except during recovery.</p>
+            <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 20px; border-radius: 8px; margin: 25px 0;">
+                <p style="margin: 0; font-size: 14px; color: #065f46; font-weight: 800;">✅ What's Next?</p>
+                <p style="margin: 8px 0 0 0; font-size: 14px; color: #047857;">Complete your profile, set up payment methods, and start using Klip's secure payment vaults.</p>
             </div>
 
             <div style="text-align: center; margin-top: 40px;">
                 <a href="{self.frontend_url}/dashboard" style="background: #f43f5e; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 15px; display: inline-block;">Access My Dashboard</a>
+            </div>
+            
+            <div style="background: #fff1f2; border-left: 4px solid #f43f5e; padding: 20px; border-radius: 8px; margin: 25px 0;">
+                <p style="margin: 0; font-size: 14px; color: #9f1239; font-weight: 800;">🔐 Security Tips:</p>
+                <p style="margin: 8px 0 0 0; font-size: 14px; color: #be123c;">• Use a strong, unique password<br>• Enable 2FA for extra security<br>• Never share your verification codes<br>• Contact support for any suspicious activity</p>
             </div>
         """
         return self._send_email(to_email, subject, self._get_html_wrapper(content))
@@ -314,7 +319,28 @@ class KlipEmailService:
                 <p style="margin: 8px 0;"><strong>Reference:</strong> {reference}</p>
                 <p style="margin: 8px 0;"><strong>Status:</strong> <span style="color: #f59e0b;">Processing</span></p>
             </div>
-            <p style="color: #64748b; font-size: 14px;">Funds will be sent to your M-PESA registered phone number. This may take a few minutes.</p>
+            <p style="color: #64748b; font-size: 14px;">Funds will be sent to your registered payment method. This may take a few minutes.</p>
+        """
+        return self._send_email(to_email, subject, self._get_html_wrapper(content))
+
+    def send_password_reset_email(self, to_email: str, reset_link: str, full_name: str = "Friend") -> bool:
+        """Send password reset email - NO recovery phrase"""
+        if not self.enabled:
+            logger.warning(f"📧 [TEST MODE] Password reset to: {to_email}")
+            return False
+            
+        subject = "Reset your Klip password"
+        content = f"""
+            <div style="text-align: center;">
+                <h2 style="font-size: 22px; color: #0f172a; margin-top: 0; font-weight: 800;">Reset Your Password</h2>
+                <p style="font-size: 16px; color: #475569;">Hello {full_name}, we received a request to reset your password.</p>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="{reset_link}" style="background: #f43f5e; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 15px; display: inline-block;">Reset Password</a>
+                </div>
+                
+                <p style="margin-top: 30px; font-size: 13px; color: #94a3b8;">This link expires in 1 hour. If you didn't request this, please ignore this email.</p>
+            </div>
         """
         return self._send_email(to_email, subject, self._get_html_wrapper(content))
 
@@ -325,6 +351,7 @@ class KlipEmailService:
             return False
         try:
             import resend
+            resend.api_key = self.api_key
             response = resend.Emails.send({
                 "from": f"{self.from_name} <{self.from_email}>",
                 "to": [to],
@@ -338,7 +365,8 @@ class KlipEmailService:
             logger.error(f"❌ Resend API Error: {e}")
             return False
 
-# --- FIXED EXPORTS ---
+
+# --- FIXED EXPORTS - NO RECOVERY PHRASE FUNCTIONS ---
 email_service = KlipEmailService()
 
 def send_verification_email(to_email: str, code: str, user_name: str = "Friend") -> bool:
@@ -368,3 +396,21 @@ def send_deposit_notification(to_email: str, amount: float, reference: str, curr
 def send_withdrawal_notification(to_email: str, amount: float, reference: str, currency: str = "KES") -> bool:
     """Send withdrawal notification email"""
     return email_service.send_withdrawal_notification(to_email, amount, reference, currency)
+
+def send_password_reset_email(to_email: str, reset_link: str, user_name: str = "Friend") -> bool:
+    """Send password reset email - email-based recovery only"""
+    return email_service.send_password_reset_email(to_email, reset_link, user_name)
+
+
+# Export all functions
+__all__ = [
+    "send_verification_email",
+    "send_welcome_email", 
+    "send_security_alert",
+    "send_locked_email",
+    "send_restored_email",
+    "send_deposit_notification",
+    "send_withdrawal_notification",
+    "send_password_reset_email",
+    "email_service"
+]
