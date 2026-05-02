@@ -1,6 +1,6 @@
 import './globals.css';
 import { ThemeProvider } from 'next-themes';
-import ClientLayout from './ClientLayout';
+import ClientLayout from '../components/layout/ClientLayout';
 
 export const metadata = {
   title: 'Klip',
