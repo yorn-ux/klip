@@ -19,12 +19,12 @@ export default function ProfessionalLandingPage() {
   }, []);
 
   const KlipLogo = () => (
-    <div className="flex items-center gap-2 group">
+    <Link href="/" className="flex items-center gap-2 group">
       <div className="w-8 h-8 bg-gradient-to-br from-slate-900 to-slate-700 rounded-xl flex items-center justify-center transition-all group-hover:shadow-lg">
         <span className="text-white font-bold text-lg">K</span>
       </div>
       <span className="text-xl font-semibold tracking-tight text-slate-900">KLIP</span>
-    </div>
+    </Link>
   );
 
   return (
@@ -35,7 +35,7 @@ export default function ProfessionalLandingPage() {
         scrolled ? 'bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-sm py-3' : 'bg-transparent py-5'
       }`}>
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
-          <Link href="/"><KlipLogo /></Link>
+          <KlipLogo />
           
           <div className="hidden md:flex items-center gap-8">
              {['Platform', 'Security', 'Pricing', 'Enterprise'].map((item) => (
@@ -46,8 +46,10 @@ export default function ProfessionalLandingPage() {
            </div>
 
           <div className="flex items-center gap-4">
-            <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-3 py-2">Sign in</Link>
-            <Link href="/register" className="px-5 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-xl hover:bg-slate-800 transition-all shadow-sm hover:shadow-md">
+            <Link href="/auth/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-3 py-2">
+              Sign in
+            </Link>
+            <Link href="/auth/register" className="px-5 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-xl hover:bg-slate-800 transition-all shadow-sm hover:shadow-md">
               Get started
             </Link>
           </div>
@@ -76,10 +78,10 @@ export default function ProfessionalLandingPage() {
             </p>
 
             <div className="flex flex-wrap gap-3">
-              <Link href="/register" className="px-6 py-3 bg-slate-900 text-white font-medium rounded-xl hover:bg-slate-800 transition-all flex items-center gap-2 shadow-sm">
+              <Link href="/auth/register" className="px-6 py-3 bg-slate-900 text-white font-medium rounded-xl hover:bg-slate-800 transition-all flex items-center gap-2 shadow-sm">
                 Start a project <ArrowRight size={16} />
               </Link>
-              <Link href="/demo" className="px-6 py-3 bg-white border border-slate-200 text-slate-700 font-medium rounded-xl hover:border-slate-300 transition-all">
+              <Link href="/contact" className="px-6 py-3 bg-white border border-slate-200 text-slate-700 font-medium rounded-xl hover:border-slate-300 transition-all">
                 Schedule a demo
               </Link>
             </div>
@@ -278,10 +280,10 @@ export default function ProfessionalLandingPage() {
             Join thousands of professionals using KLIP to transact with confidence.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-3">
-            <Link href="/register" className="px-8 py-3.5 bg-slate-900 text-white font-medium rounded-xl hover:bg-slate-800 transition-all shadow-sm">
+            <Link href="/auth/register" className="px-8 py-3.5 bg-slate-900 text-white font-medium rounded-xl hover:bg-slate-800 transition-all shadow-sm">
               Start a free project
             </Link>
-            <Link href="/demo" className="px-8 py-3.5 bg-white border border-slate-200 text-slate-700 font-medium rounded-xl hover:border-slate-300 transition-all">
+            <Link href="/contact" className="px-8 py-3.5 bg-white border border-slate-200 text-slate-700 font-medium rounded-xl hover:border-slate-300 transition-all">
               Watch demo
             </Link>
           </div>
