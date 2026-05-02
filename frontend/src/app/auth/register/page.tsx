@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState,} from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Loader2, ArrowRight, Eye, EyeOff, Mail, Lock, 
   Building2, ChevronLeft, ShieldCheck, 
-  AlertCircle, CheckCircle2, Copy,
+  AlertCircle, CheckCircle2, Copy, Key, 
+  Check, X
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/useNotificationStore';
 
@@ -20,6 +21,64 @@ interface RegistrationData {
   recoveryPhrase: string;
 }
 
+// --- Password Generation Helper ---
+const generateSecurePassword = (): string => {
+  const length = 16;
+  const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lowercase = 'abcdefghijkmnopqrstuvwxyz';
+  const numbers = '23456789';
+  const symbols = '!@#$%&*';
+  
+  const allChars = uppercase + lowercase + numbers + symbols;
+  
+  let password = '';
+  // Ensure at least one from each category
+  password += uppercase[Math.floor(Math.random() * uppercase.length)];
+  password += lowercase[Math.floor(Math.random() * lowercase.length)];
+  password += numbers[Math.floor(Math.random() * numbers.length)];
+  password += symbols[Math.floor(Math.random() * symbols.length)];
+  
+  // Fill the rest
+  for (let i = password.length; i < length; i++) {
+    password += allChars[Math.floor(Math.random() * allChars.length)];
+  }
+  
+  // Shuffle
+  return password.split('').sort(() => Math.random() - 0.5).join('');
+};
+
+// --- Password Strength & Match Check ---
+interface PasswordValidation {
+  hasLength: boolean;
+  hasUppercase: boolean;
+  hasNumber: boolean;
+  hasSymbol: boolean;
+  score: number;
+  matches: boolean;
+}
+
+const validatePassword = (password: string, confirmPassword: string): PasswordValidation => {
+  const hasLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSymbol = /[^A-Za-z0-9]/.test(password);
+  
+  let score = 0;
+  if (hasLength) score += 25;
+  if (hasUppercase) score += 25;
+  if (hasNumber) score += 25;
+  if (hasSymbol) score += 25;
+  
+  return {
+    hasLength,
+    hasUppercase,
+    hasNumber,
+    hasSymbol,
+    score,
+    matches: password === confirmPassword && password.length > 0
+  };
+};
+
 export default function RegistrationPage() {
   const router = useRouter();
   const { showToast } = useNotificationStore();
@@ -28,31 +87,51 @@ export default function RegistrationPage() {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState(0);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   
   // --- Form Data ---
   const [formData, setFormData] = useState({
     businessName: '', firstName: '', lastName: '',
-    email: '', password: '', role: 'INFLUENCER' as UserRole,
+    email: '', password: '', confirmPassword: '', role: 'INFLUENCER' as UserRole,
     acceptTerms: false
   });
 
   const [registrationData, setRegistrationData] = useState<RegistrationData | null>(null);
+  
+  // Password validation
+  const passwordValidation = validatePassword(formData.password, formData.confirmPassword);
+  const isPasswordValid = passwordValidation.score === 100 && passwordValidation.matches;
+  const isFormValid = formData.acceptTerms && 
+    (formData.role === 'BUSINESS' ? formData.businessName.trim() : (formData.firstName.trim() && formData.lastName.trim())) &&
+    formData.email.trim() &&
+    isPasswordValid;
 
-  // --- Password Strength Calculation ---
-  useEffect(() => {
-    let strength = 0;
-    const p = formData.password;
-    if (p.length >= 8) strength += 25;
-    if (/[A-Z]/.test(p) && /[0-9]/.test(p)) strength += 25;
-    if (/[^A-Za-z0-9]/.test(p)) strength += 50;
-    setPasswordStrength(strength);
-  }, [formData.password]);
+  // --- Generate Suggested Password ---
+  const handleGeneratePassword = () => {
+    setIsGenerating(true);
+    // Small delay for animation effect
+    setTimeout(() => {
+      const newPassword = generateSecurePassword();
+      setFormData(prev => ({ 
+        ...prev, 
+        password: newPassword,
+        confirmPassword: newPassword
+      }));
+      setIsGenerating(false);
+      showToast("Secure password generated", "success");
+    }, 150);
+  };
 
   // --- API Handlers ---
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isPasswordValid) {
+      showToast("Please ensure your passwords match and meet security requirements", "error");
+      return;
+    }
+    
     setIsLoading(true);
     try {
       const payloadName = formData.role === 'BUSINESS' 
@@ -81,7 +160,7 @@ export default function RegistrationPage() {
         recoveryPhrase: data.recovery_phrase
       });
 
-      setStep(2); // Move to Recovery Phrase
+      setStep(2);
       showToast("Account created successfully", "success");
     } catch (err: any) {
       showToast(err.message, "error");
@@ -97,6 +176,17 @@ export default function RegistrationPage() {
     setTimeout(() => setCopied(false), 2000);
     showToast("Recovery phrase copied", "success");
   };
+
+  // Password strength color and label
+  const getStrengthLabel = () => {
+    if (passwordValidation.score === 100) return { text: 'Strong', color: 'text-emerald-600', bg: 'bg-emerald-500' };
+    if (passwordValidation.score >= 75) return { text: 'Good', color: 'text-emerald-600', bg: 'bg-emerald-500' };
+    if (passwordValidation.score >= 50) return { text: 'Fair', color: 'text-amber-600', bg: 'bg-amber-500' };
+    if (passwordValidation.score >= 25) return { text: 'Weak', color: 'text-rose-600', bg: 'bg-rose-500' };
+    return { text: 'Very Weak', color: 'text-rose-600', bg: 'bg-rose-500' };
+  };
+  
+  const strength = getStrengthLabel();
 
   return (
     <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans selection:bg-amber-100">
@@ -114,17 +204,17 @@ export default function RegistrationPage() {
       </header>
 
       <main className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-[460px] animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="w-full max-w-[480px] animate-in fade-in slide-in-from-bottom-4 duration-700">
           
           {/* LOGO AREA */}
-          <div className="text-center mb-10">
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 shadow-xl mb-6">
+          <div className="text-center mb-8">
+            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 shadow-xl mb-5">
               <span className="text-amber-400 text-2xl font-black">K</span>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">
+            <h1 className="text-2xl font-bold tracking-tight">
               {step === 1 ? "Create your account" : "Secure your workspace"}
             </h1>
-            <p className="text-slate-500 mt-2">
+            <p className="text-slate-500 text-sm mt-1.5">
               {step === 1 ? "Join the next generation of infrastructure" : "This phrase is the only way to recover your account."}
             </p>
           </div>
@@ -133,16 +223,16 @@ export default function RegistrationPage() {
           {step === 1 && (
             <form onSubmit={handleRegister} className="space-y-5">
               {/* Role Selector */}
-              <div className="grid grid-cols-2 gap-3 p-1 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="grid grid-cols-2 gap-3 p-1 bg-slate-50 rounded-xl border border-slate-100">
                 {(['INFLUENCER', 'BUSINESS'] as UserRole[]).map((r) => (
                   <button
                     key={r} type="button"
                     onClick={() => setFormData({ ...formData, role: r })}
-                    className={`py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
+                    className={`py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
                       formData.role === r ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'
                     }`}
                   >
-                    {r}
+                    {r === 'INFLUENCER' ? 'Creator/Individual' : 'Brand / Agency'}
                   </button>
                 ))}
               </div>
@@ -152,7 +242,7 @@ export default function RegistrationPage() {
                   <div className="relative group">
                     <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={18} />
                     <input 
-                      required className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-transparent rounded-2xl focus:bg-white focus:ring-2 focus:ring-slate-900 transition-all outline-none"
+                      required className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-transparent rounded-xl focus:bg-white focus:border-slate-200 focus:ring-2 focus:ring-slate-900/10 transition-all outline-none"
                       placeholder="Company Name"
                       value={formData.businessName}
                       onChange={e => setFormData({...formData, businessName: e.target.value})}
@@ -161,13 +251,13 @@ export default function RegistrationPage() {
                 ) : (
                   <div className="grid grid-cols-2 gap-3">
                     <input 
-                      required className="w-full px-4 py-3.5 bg-slate-50 border-transparent rounded-2xl focus:bg-white focus:ring-2 focus:ring-slate-900 transition-all outline-none"
+                      required className="w-full px-4 py-3 bg-slate-50 border border-transparent rounded-xl focus:bg-white focus:border-slate-200 focus:ring-2 focus:ring-slate-900/10 transition-all outline-none"
                       placeholder="First Name"
                       value={formData.firstName}
                       onChange={e => setFormData({...formData, firstName: e.target.value})}
                     />
                     <input 
-                      required className="w-full px-4 py-3.5 bg-slate-50 border-transparent rounded-2xl focus:bg-white focus:ring-2 focus:ring-slate-900 transition-all outline-none"
+                      required className="w-full px-4 py-3 bg-slate-50 border border-transparent rounded-xl focus:bg-white focus:border-slate-200 focus:ring-2 focus:ring-slate-900/10 transition-all outline-none"
                       placeholder="Last Name"
                       value={formData.lastName}
                       onChange={e => setFormData({...formData, lastName: e.target.value})}
@@ -179,36 +269,123 @@ export default function RegistrationPage() {
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={18} />
                   <input 
                     type="email" required
-                    className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-transparent rounded-2xl focus:bg-white focus:ring-2 focus:ring-slate-900 transition-all outline-none"
+                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-transparent rounded-xl focus:bg-white focus:border-slate-200 focus:ring-2 focus:ring-slate-900/10 transition-all outline-none"
                     placeholder="Email address"
                     value={formData.email}
                     onChange={e => setFormData({...formData, email: e.target.value})}
                   />
                 </div>
 
+                {/* Password Field with Generate Button */}
+                <div className="space-y-2">
+                  <div className="relative group">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={18} />
+                    <input 
+                      type={showPassword ? "text" : "password"} required
+                      className="w-full pl-12 pr-24 py-3 bg-slate-50 border border-transparent rounded-xl focus:bg-white focus:border-slate-200 focus:ring-2 focus:ring-slate-900/10 transition-all outline-none"
+                      placeholder="Create secure password"
+                      value={formData.password}
+                      onChange={e => setFormData({...formData, password: e.target.value})}
+                    />
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      <button 
+                        type="button" 
+                        onClick={handleGeneratePassword}
+                        disabled={isGenerating}
+                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all"
+                        title="Generate secure password"
+                      >
+                        {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Key size={16} />}
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all"
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Password Strength Meter */}
+                  {formData.password && (
+                    <div className="space-y-1.5">
+                      <div className="flex gap-1 h-1">
+                        {[25, 50, 75, 100].map((s) => (
+                          <div 
+                            key={s} 
+                            className={`flex-1 rounded-full transition-all duration-300 ${
+                              passwordValidation.score >= s ? strength.bg : 'bg-slate-100'
+                            }`} 
+                          />
+                        ))}
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className={`font-medium ${strength.color}`}>
+                          {strength.text} password
+                        </span>
+                        {passwordValidation.score === 100 && (
+                          <span className="text-emerald-600 flex items-center gap-1">
+                            <Check size={12} /> Secure
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Confirm Password Field */}
                 <div className="relative group">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={18} />
                   <input 
-                    type={showPassword ? "text" : "password"} required
-                    className="w-full pl-12 pr-12 py-3.5 bg-slate-50 border-transparent rounded-2xl focus:bg-white focus:ring-2 focus:ring-slate-900 transition-all outline-none"
-                    placeholder="Create secure password"
-                    onChange={e => setFormData({...formData, password: e.target.value})}
+                    type={showConfirmPassword ? "text" : "password"} required
+                    className={`w-full pl-12 pr-12 py-3 bg-slate-50 border rounded-xl focus:bg-white focus:ring-2 focus:ring-slate-900/10 transition-all outline-none ${
+                      formData.confirmPassword && !passwordValidation.matches 
+                        ? 'border-rose-300 focus:border-rose-300' 
+                        : formData.confirmPassword && passwordValidation.matches
+                        ? 'border-emerald-300 focus:border-emerald-300'
+                        : 'border-transparent focus:border-slate-200'
+                    }`}
+                    placeholder="Confirm password"
+                    value={formData.confirmPassword}
+                    onChange={e => setFormData({...formData, confirmPassword: e.target.value})}
                   />
                   <button 
-                    type="button" onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900"
+                    type="button" 
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
+                  {formData.confirmPassword && (
+                    <div className="absolute right-12 top-1/2 -translate-y-1/2">
+                      {passwordValidation.matches ? (
+                        <Check size={16} className="text-emerald-500" />
+                      ) : (
+                        <X size={16} className="text-rose-400" />
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {/* Password Strength Meter */}
+                {/* Password Requirements Checklist */}
                 {formData.password && (
-                  <div className="px-1 space-y-2">
-                    <div className="flex gap-1.5 h-1">
-                      {[25, 50, 75, 100].map((s) => (
-                        <div key={s} className={`flex-1 rounded-full transition-all duration-500 ${passwordStrength >= s ? (passwordStrength <= 50 ? 'bg-amber-400' : 'bg-emerald-500') : 'bg-slate-100'}`} />
-                      ))}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 px-1">
+                    <div className={`flex items-center gap-1.5 text-xs ${passwordValidation.hasLength ? 'text-emerald-600' : 'text-slate-400'}`}>
+                      {passwordValidation.hasLength ? <Check size={12} /> : <div className="w-3 h-3 rounded-full border border-slate-300" />}
+                      <span>At least 8 characters</span>
+                    </div>
+                    <div className={`flex items-center gap-1.5 text-xs ${passwordValidation.hasUppercase ? 'text-emerald-600' : 'text-slate-400'}`}>
+                      {passwordValidation.hasUppercase ? <Check size={12} /> : <div className="w-3 h-3 rounded-full border border-slate-300" />}
+                      <span>Uppercase letter</span>
+                    </div>
+                    <div className={`flex items-center gap-1.5 text-xs ${passwordValidation.hasNumber ? 'text-emerald-600' : 'text-slate-400'}`}>
+                      {passwordValidation.hasNumber ? <Check size={12} /> : <div className="w-3 h-3 rounded-full border border-slate-300" />}
+                      <span>Number</span>
+                    </div>
+                    <div className={`flex items-center gap-1.5 text-xs ${passwordValidation.hasSymbol ? 'text-emerald-600' : 'text-slate-400'}`}>
+                      {passwordValidation.hasSymbol ? <Check size={12} /> : <div className="w-3 h-3 rounded-full border border-slate-300" />}
+                      <span>Special character</span>
                     </div>
                   </div>
                 )}
@@ -217,19 +394,20 @@ export default function RegistrationPage() {
               <div className="flex items-start gap-3 px-1">
                 <input 
                   type="checkbox" id="terms" required
-                  className="mt-1 h-4 w-4 rounded border-slate-200 text-slate-900 focus:ring-slate-900"
+                  className="mt-0.5 h-4 w-4 rounded border-slate-200 text-slate-900 focus:ring-slate-900"
                   onChange={e => setFormData({...formData, acceptTerms: e.target.checked})}
                 />
-                <label htmlFor="terms" className="text-xs text-slate-500 leading-normal">
-                  I agree to the <span className="text-slate-900 font-bold underline cursor-pointer">Terms of Service</span> and understand the risks of digital asset management.
+                <label htmlFor="terms" className="text-xs text-slate-500 leading-relaxed">
+                  I agree to the <span className="text-slate-900 font-medium underline cursor-pointer">Terms of Service</span> and understand the risks of digital asset management.
                 </label>
               </div>
 
               <button 
-                type="submit" disabled={isLoading || !formData.acceptTerms}
-                className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-bold transition-all flex justify-center items-center gap-2 active:scale-[0.98] disabled:opacity-50 shadow-lg shadow-slate-100"
+                type="submit" 
+                disabled={isLoading || !isFormValid}
+                className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold transition-all flex justify-center items-center gap-2 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 shadow-lg shadow-slate-100"
               >
-                {isLoading ? <Loader2 className="animate-spin" size={20} /> : <>Generate Secure Account <ArrowRight size={20} /></>}
+                {isLoading ? <Loader2 className="animate-spin" size={18} /> : <>Create account <ArrowRight size={18} /></>}
               </button>
             </form>
           )}
@@ -237,18 +415,18 @@ export default function RegistrationPage() {
           {/* STEP 2: RECOVERY PHRASE (Post-API) */}
           {step === 2 && registrationData && (
             <div className="space-y-6 animate-in zoom-in-95 duration-500">
-              <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex gap-3 items-start">
-                <AlertCircle className="text-rose-600 shrink-0" size={20} />
-                <p className="text-xs text-rose-800 leading-relaxed font-medium">
-                  Write these 12 words down on paper. If you lose them, Klip cannot recover your account or your funds.
+              <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl flex gap-3 items-start">
+                <AlertCircle className="text-amber-600 shrink-0" size={18} />
+                <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                  Write these 12 words down on paper. If you lose them, KLIP cannot recover your account or your funds.
                 </p>
               </div>
 
               <div className="grid grid-cols-3 gap-2">
                 {registrationData.recoveryPhrase.split(' ').map((word, i) => (
-                  <div key={i} className="bg-slate-50 border border-slate-100 p-3 rounded-xl flex items-center gap-2">
-                    <span className="text-[10px] font-black text-slate-300 w-4">{i + 1}</span>
-                    <span className="text-sm font-bold text-slate-700">{word}</span>
+                  <div key={i} className="bg-slate-50 border border-slate-100 p-2.5 rounded-lg flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-slate-300 w-4">{i + 1}</span>
+                    <span className="text-sm font-mono font-medium text-slate-700">{word}</span>
                   </div>
                 ))}
               </div>
@@ -256,16 +434,16 @@ export default function RegistrationPage() {
               <div className="flex flex-col gap-3">
                 <button 
                   onClick={copyToClipboard}
-                  className="w-full py-3.5 border-2 border-slate-100 hover:bg-slate-50 rounded-2xl font-bold flex justify-center items-center gap-2 transition-colors"
+                  className="w-full py-3 border-2 border-slate-100 hover:bg-slate-50 rounded-xl font-medium flex justify-center items-center gap-2 transition-colors"
                 >
-                  {copied ? <CheckCircle2 className="text-emerald-500" size={18} /> : <Copy size={18} />}
-                  {copied ? "Copied" : "Copy to Clipboard"}
+                  {copied ? <CheckCircle2 className="text-emerald-500" size={16} /> : <Copy size={16} />}
+                  {copied ? "Copied to clipboard" : "Copy recovery phrase"}
                 </button>
                 <button 
                   onClick={() => setStep(3)}
-                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold flex justify-center items-center gap-2"
+                  className="w-full py-3.5 bg-slate-900 text-white rounded-xl font-semibold flex justify-center items-center gap-2"
                 >
-                  I've Secured My Phrase <ArrowRight size={20} />
+                  I've secured my phrase <ArrowRight size={16} />
                 </button>
               </div>
             </div>
@@ -275,19 +453,19 @@ export default function RegistrationPage() {
           {step === 3 && registrationData && (
             <div className="text-center space-y-6 animate-in fade-in scale-95">
               <div className="flex justify-center">
-                <div className="h-20 w-20 bg-emerald-50 rounded-full flex items-center justify-center">
-                  <CheckCircle2 className="text-emerald-500" size={40} />
+                <div className="h-16 w-16 bg-emerald-50 rounded-full flex items-center justify-center">
+                  <CheckCircle2 className="text-emerald-500" size={32} />
                 </div>
               </div>
               <div>
-                <h2 className="text-xl font-bold">Setup Complete</h2>
-                <p className="text-slate-500 text-sm mt-1">Operator ID: <span className="font-mono text-slate-900">{registrationData.operatorId}</span></p>
+                <h2 className="text-xl font-bold">Setup complete</h2>
+                <p className="text-slate-500 text-sm mt-1">Operator ID: <span className="font-mono text-slate-800 text-xs bg-slate-100 px-2 py-0.5 rounded">{registrationData.operatorId}</span></p>
               </div>
               <button 
                 onClick={() => router.push('/client/dashboard')}
-                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold"
+                className="w-full py-3.5 bg-slate-900 text-white rounded-xl font-semibold"
               >
-                Enter Dashboard
+                Enter dashboard
               </button>
             </div>
           )}
@@ -295,11 +473,11 @@ export default function RegistrationPage() {
       </main>
 
       {/* Footer */}
-      <footer className="p-8 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-slate-50">
-        <p className="text-[11px] text-slate-400 font-medium uppercase tracking-widest">© 2026 Klip Secure Infrastructure</p>
+      <footer className="p-6 flex flex-col md:flex-row items-center justify-between gap-3 border-t border-slate-100">
+        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">© 2025 KLIP Secure Infrastructure</p>
         <div className="flex gap-6">
-          <Link href="/privacy" className="text-[11px] text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest font-bold">Privacy</Link>
-          <Link href="/terms" className="text-[11px] text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest font-bold">Protocol</Link>
+          <Link href="/privacy" className="text-[10px] text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-wider font-medium">Privacy</Link>
+          <Link href="/terms" className="text-[10px] text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-wider font-medium">Protocol</Link>
         </div>
       </footer>
     </div>

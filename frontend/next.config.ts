@@ -3,9 +3,8 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },
-  
-  // Remove async headers() function entirely
-  // Let Stripe handle its own CSP
+  // Only use this if you're using Pages Router
+  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
 };
 
 export default nextConfig;
