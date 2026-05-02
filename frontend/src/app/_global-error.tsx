@@ -1,4 +1,11 @@
-export default function GlobalError() {
+'use client';
+
+export default function GlobalError({
+  reset,
+}: {
+  error: Error;
+  reset: () => void;
+}) {
   return (
     <html>
       <body>
@@ -13,10 +20,9 @@ export default function GlobalError() {
           <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>
             Please try again later.
           </p>
+
           <button
-            onClick={() => {
-              window.location.reload()
-            }}
+            onClick={() => reset()}
             style={{
               backgroundColor: '#2563eb',
               color: 'white',
@@ -27,10 +33,10 @@ export default function GlobalError() {
               cursor: 'pointer'
             }}
           >
-            Reload Page
+            Try Again
           </button>
         </div>
       </body>
     </html>
-  )
+  );
 }
