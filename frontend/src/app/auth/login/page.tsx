@@ -18,10 +18,9 @@ interface VerificationData {
 // Role-based dashboard routing - FAST lookup
 const getDashboardRoute = (role: string): string => {
   const roleLower = role.toLowerCase();
-  // Direct mapping for speed
   if (roleLower === 'admin') return '/admin/dashboard';
   if (roleLower === 'business') return '/business/dashboard';
-  return '/client/dashboard'; // Default for influencer and others
+  return '/client/dashboard';
 };
 
 export default function LoginPage() {
@@ -53,7 +52,7 @@ export default function LoginPage() {
     };
   }, [verificationTimer]);
 
-  // --- Login Handler - Optimized for speed ---
+  // --- Login Handler - FIXED ---
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -76,6 +75,7 @@ export default function LoginPage() {
       });
 
       const data = await response.json();
+      console.log('Login response:', data); // Debug log
       
       // Handle unverified email
       if (response.status === 403 && data.detail?.includes("Email not verified")) {
@@ -105,22 +105,28 @@ export default function LoginPage() {
       const token = data.access_token;
       localStorage.setItem('access_token', token);
       
-      // Get user role from response (already provided by backend)
-      const userRole = data.user?.role?.toLowerCase() || 'influencer';
-      const userEmail = data.user?.email || formData.email;
-      const userName = data.user?.full_name || '';
+      // Get user role from response - THIS IS THE KEY FIX
+      let userRole = 'influencer';
+      if (data.user && data.user.role) {
+        userRole = data.user.role.toLowerCase();
+      }
       
+      // Store user data
       localStorage.setItem('user_role', userRole);
-      localStorage.setItem('user_email', userEmail);
-      localStorage.setItem('user_name', userName);
+      localStorage.setItem('user_email', data.user?.email || formData.email);
+      localStorage.setItem('user_name', data.user?.full_name || '');
+      localStorage.setItem('user_operator_id', data.user?.operator_id || '');
       
+      console.log('Stored role:', userRole); // Debug log
       showToast("Login successful!", "success");
       
-      // INSTANT REDIRECT - no delay
+      // INSTANT REDIRECT
       const dashboardRoute = getDashboardRoute(userRole);
+      console.log('Redirecting to:', dashboardRoute); // Debug log
       router.push(dashboardRoute);
       
     } catch (err: any) {
+      console.error('Login error:', err);
       showToast(err.message, "error");
       setIsLoading(false);
     }
@@ -163,7 +169,7 @@ export default function LoginPage() {
     }
   };
 
-  // --- Verify Email Code - With instant redirect ---
+  // --- Verify Email Code - FIXED ---
   const handleVerifyEmail = async () => {
     if (!verificationCode || verificationCode.length !== 6) {
       showToast("Please enter the 6-digit verification code", "error");
@@ -183,6 +189,8 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
+      console.log('Verification response:', data); // Debug log
+      
       if (!res.ok) throw new Error(data.detail || "Verification failed");
 
       if (data.access_token) {
@@ -196,7 +204,7 @@ export default function LoginPage() {
         if (data.user?.role) {
           userRole = data.user.role.toLowerCase();
         } else {
-          // Fast fetch user data to get role
+          // Fetch user data to get role
           const meRes = await fetch(`${API_URL}/api/v1/auth/me`, {
             headers: { 'Authorization': `Bearer ${data.access_token}` }
           });
@@ -204,6 +212,7 @@ export default function LoginPage() {
             const userData = await meRes.json();
             userRole = userData.role?.toLowerCase() || 'influencer';
             localStorage.setItem('user_name', userData.full_name || '');
+            localStorage.setItem('user_operator_id', userData.operator_id || '');
           }
         }
         
@@ -213,10 +222,12 @@ export default function LoginPage() {
         
         // INSTANT REDIRECT to role-based dashboard
         const dashboardRoute = getDashboardRoute(userRole);
+        console.log('Verification redirect to:', dashboardRoute); // Debug log
         router.push(dashboardRoute);
       }
       
     } catch (err: any) {
+      console.error('Verification error:', err);
       showToast(err.message, "error");
       setIsVerifying(false);
     }
@@ -254,7 +265,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* VERIFICATION FORM (shown when email not verified) */}
+          {/* VERIFICATION FORM */}
           {verificationData ? (
             <div className="space-y-6 animate-in zoom-in-95 duration-500">
               <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl flex gap-3 items-start">
@@ -316,7 +327,6 @@ export default function LoginPage() {
           ) : (
             /* LOGIN FORM */
             <form onSubmit={handleLogin} className="space-y-5">
-              {/* Email Field */}
               <div className="relative group">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={18} />
                 <input 
@@ -329,7 +339,6 @@ export default function LoginPage() {
                 />
               </div>
 
-              {/* Password Field */}
               <div className="relative group">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={18} />
                 <input 
@@ -349,7 +358,6 @@ export default function LoginPage() {
                 </button>
               </div>
 
-              {/* Forgot Password Link */}
               <div className="flex justify-end">
                 <Link 
                   href="/auth/forgot-password" 
@@ -367,7 +375,6 @@ export default function LoginPage() {
                 {isLoading ? <Loader2 className="animate-spin" size={18} /> : <>Sign in <ArrowRight size={18} /></>}
               </button>
 
-              {/* Sign Up Link */}
               <div className="text-center pt-4">
                 <p className="text-xs text-slate-400">
                   Don't have an account?{' '}
