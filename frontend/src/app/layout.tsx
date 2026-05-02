@@ -202,10 +202,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     // Clear sessionStorage
     sessionStorage.clear();
     
-    // Clear cookies
-    document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-    document.cookie = "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-    document.cookie = "klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+     // Clear cookies
+     document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+     document.cookie = "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
     
     setCurrentUser(null);
     showToast('You have been signed out', 'success');

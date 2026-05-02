@@ -46,7 +46,7 @@ export default function SettingsHub() {
        setError(null);
        
        try {
-         const token = localStorage.getItem('auth_token') || getCookie('klip_token');
+          const token = localStorage.getItem('auth_token') || getCookie('access_token');
          const storedUser = localStorage.getItem('klip_user');
 
          if (!token || !storedUser) {

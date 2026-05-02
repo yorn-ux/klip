@@ -130,19 +130,19 @@ export default function InfluencerSettings({ data: initialData }: { data: any })
         }
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        // Clear local storage and redirect to locked page with the token
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('klip_user');
-        document.cookie = 'klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-        document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-        
-        // Redirect to locked page with the lock token
-        window.location.href = `/auth/locked?token=${data.lock_token}`;
-      } else {
-        alert('Failed to freeze account. Please try again or contact support.');
-      }
+       if (response.ok) {
+         const data = await response.json();
+         // Clear local storage and redirect to locked page with the token
+         localStorage.removeItem('auth_token');
+         localStorage.removeItem('klip_user');
+         document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+         document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+         
+         // Redirect to locked page with the lock token
+         window.location.href = `/auth/locked?token=${data.lock_token}`;
+       } else {
+         alert('Failed to freeze account. Please try again or contact support.');
+       }
     } catch (error) {
       console.error('Freeze account error:', error);
       alert('An error occurred. Please contact support.');

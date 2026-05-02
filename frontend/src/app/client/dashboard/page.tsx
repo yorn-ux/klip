@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { 
-  ArrowUpRight,  Zap, Loader2, 
+  ArrowUpRight, Zap, Loader2, 
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -13,21 +13,27 @@ export default function InfluencerDashboard() {
   const [balance, setBalance] = useState<{ amount: number; currency: string } | null>(null);
   const [activeVault, setActiveVault] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   const KES_TO_USD = 0.0076; 
 
-  // Get auth token from cookies
-  const getAuthToken = useCallback(() => {
-    if (typeof document === 'undefined') return null;
-    const getCookie = (name: string) => {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) return parts.pop()?.split(';').shift();
-    };
-    return getCookie('klip_token');
-  }, []);
+   // Get auth token - FIXED to match login page
+   const getAuthToken = useCallback(() => {
+     // First try localStorage (where login stores it)
+     const localToken = localStorage.getItem('access_token');
+     if (localToken) return localToken;
+     
+     // Fallback to cookies
+     if (typeof document === 'undefined') return null;
+     const getCookie = (name: string) => {
+       const value = `; ${document.cookie}`;
+       const parts = value.split(`; ${name}=`);
+       if (parts.length === 2) return parts.pop()?.split(';').shift();
+       return null;
+     };
+     return getCookie('access_token');
+   }, []);
 
   const fetchData = useCallback(async (opId: string) => {
     if (!opId) return;
@@ -58,38 +64,91 @@ export default function InfluencerDashboard() {
     } catch (err) {
       console.error("Dashboard Sync Error:", err);
     } finally {
-      setTimeout(() => setLoading(false), 500);
+      setLoading(false);
     }
   }, [API_URL, getAuthToken, router]);
 
+  // Check authentication and get user data
   useEffect(() => {
-    setMounted(true);
-    const storedUser = localStorage.getItem('klip_user');
-    if (storedUser) {
-      try {
-        const parsed = JSON.parse(storedUser);
-        setIdentity({ 
-          operator_id: parsed.operator_id || parsed.id || '', 
-          fullName: parsed.full_name || parsed.fullName || 'Creator',
-          email: parsed.email || '',
-          avatar_url: parsed.avatar_url || ''
-        });
-      } catch (err) {
-        console.error("Failed to parse user data:", err);
-        router.push('/auth/login');
+    const checkAuth = async () => {
+      const token = getAuthToken();
+      
+      if (!token) {
+        router.replace('/auth/login');
+        return;
       }
-    } else {
-      router.push('/auth/login');
-    }
-  }, [router]);
+      
+      // Try to get user from localStorage first
+      let storedUser = localStorage.getItem('klip_user');
+      let userData = null;
+      
+      if (storedUser) {
+        try {
+          userData = JSON.parse(storedUser);
+        } catch (err) {
+          console.error("Failed to parse user data:", err);
+        }
+      }
+      
+      // If not in localStorage, fetch from API
+      if (!userData) {
+        try {
+          const response = await fetch(`${API_URL}/api/v1/auth/me`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          if (response.ok) {
+            userData = await response.json();
+            // Store for future use
+            localStorage.setItem('klip_user', JSON.stringify(userData));
+            localStorage.setItem('user_role', userData.role?.toLowerCase() || 'influencer');
+          } else {
+            // Token invalid
+            localStorage.removeItem('access_token');
+            router.replace('/auth/login');
+            return;
+          }
+        } catch (err) {
+          console.error("Failed to fetch user data:", err);
+          router.replace('/auth/login');
+          return;
+        }
+      }
+      
+      if (userData) {
+        setIdentity({ 
+          operator_id: userData.operator_id || userData.id || '', 
+          fullName: userData.full_name || userData.fullName || 'Creator',
+          email: userData.email || '',
+          avatar_url: userData.avatar_url || ''
+        });
+        setIsCheckingAuth(false);
+      } else {
+        router.replace('/auth/login');
+      }
+    };
+    
+    checkAuth();
+  }, [API_URL, getAuthToken, router]);
 
+  // Fetch dashboard data once we have operator_id
   useEffect(() => {
-    if (mounted && identity.operator_id) {
+    if (!isCheckingAuth && identity.operator_id) {
       fetchData(identity.operator_id);
     }
-  }, [mounted, identity.operator_id, fetchData]);
+  }, [isCheckingAuth, identity.operator_id, fetchData]);
 
-  if (!mounted) return null;
+  // Show loading while checking auth
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="animate-spin w-8 h-8 text-rose-500 mx-auto mb-4" />
+          <p className="text-sm text-gray-500">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -104,17 +163,17 @@ export default function InfluencerDashboard() {
           </div>
           
           {/* User Menu */}
-          <Link href="/client/settings" className="flex items-center gap-2">
+          <Link href="/settings" className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
               {identity.avatar_url ? (
                 <img src={identity.avatar_url} alt={identity.fullName} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-rose-500 flex items-center justify-center text-white text-sm">
-                  {identity.fullName.charAt(0)}
+                <div className="w-full h-full bg-rose-500 flex items-center justify-center text-white text-sm font-medium">
+                  {identity.fullName.charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
-            <span className="text-sm font-medium">{identity.fullName.split(' ')[0]}</span>
+            <span className="text-sm font-medium text-gray-700">{identity.fullName.split(' ')[0]}</span>
           </Link>
         </div>
       </div>
@@ -150,7 +209,7 @@ export default function InfluencerDashboard() {
           </div>
 
           {loading ? (
-            <div className="bg-white rounded-2xl p-8 flex justify-center">
+            <div className="bg-white rounded-2xl p-8 flex justify-center border border-gray-100">
               <Loader2 className="animate-spin text-rose-500" size={24} />
             </div>
           ) : activeVault ? (
@@ -162,7 +221,7 @@ export default function InfluencerDashboard() {
                 </div>
                 {activeVault.vault_id && (
                   <Link 
-                    href={`/client/vaults/${activeVault.vault_id}`}
+                    href={`/vaults/${activeVault.vault_id}`}
                     className="p-2 hover:bg-gray-50 rounded-lg transition-colors"
                   >
                     <ArrowUpRight size={18} className="text-gray-400" />
@@ -197,6 +256,9 @@ export default function InfluencerDashboard() {
           ) : (
             <div className="bg-white rounded-2xl p-8 text-center border border-gray-100">
               <p className="text-gray-500">No active projects</p>
+              <Link href="/vaults/create" className="text-sm text-rose-500 hover:text-rose-600 mt-2 inline-block">
+                Create your first project →
+              </Link>
             </div>
           )}
         </div>
@@ -213,7 +275,7 @@ export default function InfluencerDashboard() {
                  href="/wallet" 
                  className="text-sm text-amber-800 hover:text-amber-900 font-medium"
                >
-                 Deposit
+                 Deposit →
                </Link>
             </div>
           </div>

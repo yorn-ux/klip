@@ -74,25 +74,25 @@ export default function AdminDashboard() {
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-  // Helper function to get token (same as login page)
-  const getToken = useCallback((): string | null => {
-    if (typeof window === 'undefined') return null;
-    
-    const localToken = localStorage.getItem('auth_token');
-    if (localToken) return localToken;
-    
-    const getCookie = (name: string): string | null => {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) {
-        const cookieValue = parts.pop();
-        return cookieValue ? cookieValue.split(';').shift() || null : null;
-      }
-      return null;
-    };
-    
-    return getCookie('klip_token');
-  }, []);
+   // Helper function to get token (same as login page)
+   const getToken = useCallback((): string | null => {
+     if (typeof window === 'undefined') return null;
+     
+     const localToken = localStorage.getItem('auth_token');
+     if (localToken) return localToken;
+     
+     const getCookie = (name: string): string | null => {
+       const value = `; ${document.cookie}`;
+       const parts = value.split(`; ${name}=`);
+       if (parts.length === 2) {
+         const cookieValue = parts.pop();
+         return cookieValue ? cookieValue.split(';').shift() || null : null;
+       }
+       return null;
+     };
+     
+     return getCookie('access_token');
+   }, []);
 
   const getAuthHeaders = useCallback((): Record<string, string> => {
     const token = getToken();

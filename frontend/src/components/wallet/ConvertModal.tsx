@@ -64,11 +64,11 @@ export default function ConvertModal({ isOpen, onClose, balances, onSuccess }: C
     loyaltyTier: 'bronze' as 'bronze' | 'silver' | 'gold' | 'platinum'
   });
 
-  // Auth helper
-  const getAuthToken = () => {
-    return localStorage.getItem('auth_token') || 
-           document.cookie.split('; ').find(row => row.startsWith('klip_token='))?.split('=')[1];
-  };
+   // Auth helper
+   const getAuthToken = () => {
+     return localStorage.getItem('auth_token') || 
+            document.cookie.split('; ').find(row => row.startsWith('access_token='))?.split('=')[1];
+   };
 
   const parseBalance = (val: string) => parseFloat(val.replace(/,/g, '')) || 0;
 

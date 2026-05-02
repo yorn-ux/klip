@@ -64,11 +64,11 @@ function LockAccountContent() {
         setStatus('success');
         setMessage(data.message || 'Your account has been locked successfully.');
         
-        // Clear any auth data
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('klip_user');
-        document.cookie = 'klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-        document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+         // Clear any auth data
+         localStorage.removeItem('auth_token');
+         localStorage.removeItem('klip_user');
+         document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+         document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
       } else {
         setStatus('error');
         setMessage(data.detail || data.message || 'Failed to lock account. The link may be invalid or expired.');

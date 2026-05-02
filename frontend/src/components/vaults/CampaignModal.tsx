@@ -165,16 +165,16 @@ export default function CampaignModal({ isOpen, onClose, campaign, mode = 'apply
     required: true
   });
 
-  const getAuthToken = () => {
-    if (typeof document === 'undefined') return null;
-    const localStorageToken = localStorage.getItem('auth_token');
-    if (localStorageToken) return localStorageToken;
+   const getAuthToken = () => {
+     if (typeof document === 'undefined') return null;
+     const localStorageToken = localStorage.getItem('auth_token');
+     if (localStorageToken) return localStorageToken;
 
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; klip_token=`);
-    if (parts.length === 2) return parts.pop()?.split(';').shift();
-    return null;
-  };
+     const value = `; ${document.cookie}`;
+     const parts = value.split(`; access_token=`);
+     if (parts.length === 2) return parts.pop()?.split(';').shift();
+     return null;
+   };
 
   useEffect(() => {
     if (!isOpen) {

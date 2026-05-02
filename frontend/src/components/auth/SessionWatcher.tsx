@@ -15,7 +15,7 @@ export const SessionWatcher = () => {
         pathname?.startsWith('/admin');
 
       const sessionData = sessionStorage.getItem('klip_session');
-      const hasToken = document.cookie.includes('klip_token=');
+      const hasToken = document.cookie.includes('access_token=');
 
       // 1. If in a protected route but session is missing, go to login
       if (isProtectedRoute && !sessionData) {

@@ -91,11 +91,11 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
     onClose();
   };
 
-  // Auth helper
-  const getAuthToken = () => {
-    return localStorage.getItem('auth_token') || 
-           document.cookie.split('; ').find(row => row.startsWith('klip_token='))?.split('=')[1];
-  };
+   // Auth helper
+   const getAuthToken = () => {
+     return localStorage.getItem('auth_token') || 
+            document.cookie.split('; ').find(row => row.startsWith('access_token='))?.split('=')[1];
+   };
 
   // Check transaction status with payment gateway
   const checkTransactionStatus = async (invoiceId: string) => {

@@ -97,16 +97,16 @@ export default function BusinessSettings({ data }: any) {
         }
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('klip_user');
-        document.cookie = 'klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-        document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-        window.location.href = `/auth/locked?token=${data.lock_token}`;
-      } else {
-        alert('Failed to freeze account. Please try again or contact support.');
-      }
+       if (response.ok) {
+         const data = await response.json();
+         localStorage.removeItem('auth_token');
+         localStorage.removeItem('klip_user');
+         document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+         document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+         window.location.href = `/auth/locked?token=${data.lock_token}`;
+       } else {
+         alert('Failed to freeze account. Please try again or contact support.');
+       }
     } catch (error) {
       console.error('Freeze account error:', error);
       alert('An error occurred. Please contact support.');
@@ -133,12 +133,12 @@ export default function BusinessSettings({ data }: any) {
     }
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('klip_user');
-    document.cookie = "klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-    router.push('/auth/login');
-  };
+   const handleLogout = () => {
+     localStorage.removeItem('auth_token');
+     localStorage.removeItem('klip_user');
+     document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+     router.push('/auth/login');
+   };
 
   // Backend Data Normalization with comprehensive defaults
   const company = data?.company || {};

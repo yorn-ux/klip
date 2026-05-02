@@ -31,16 +31,16 @@ export default function ApiRegistry() {
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-  // Get auth token from cookies (same as other pages)
-  const getAuthToken = useCallback(() => {
-    if (typeof document === 'undefined') return null;
-    const getCookie = (name: string) => {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) return parts.pop()?.split(';').shift();
-    };
-    return getCookie('klip_token') || localStorage.getItem('auth_token');
-  }, []);
+   // Get auth token from cookies (same as other pages)
+   const getAuthToken = useCallback(() => {
+     if (typeof document === 'undefined') return null;
+     const getCookie = (name: string) => {
+       const value = `; ${document.cookie}`;
+       const parts = value.split(`; ${name}=`);
+       if (parts.length === 2) return parts.pop()?.split(';').shift();
+     };
+     return getCookie('access_token') || localStorage.getItem('auth_token');
+   }, []);
 
   // Check authentication on mount
   useEffect(() => {

@@ -68,24 +68,24 @@ export default function EnhancedAuditLedger() {
   const limit = 50;
 
   // ==================== AUTHENTICATION ====================
-  const getToken = useCallback((): string | null => {
-    if (typeof window === 'undefined') return null;
-    
-    const localToken = localStorage.getItem('auth_token');
-    if (localToken) return localToken;
-    
-    const getCookie = (name: string): string | null => {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) {
-        const cookieValue = parts.pop();
-        return cookieValue ? cookieValue.split(';').shift() || null : null;
-      }
-      return null;
-    };
-    
-    return getCookie('klip_token');
-  }, []);
+   const getToken = useCallback((): string | null => {
+     if (typeof window === 'undefined') return null;
+     
+     const localToken = localStorage.getItem('auth_token');
+     if (localToken) return localToken;
+     
+     const getCookie = (name: string): string | null => {
+       const value = `; ${document.cookie}`;
+       const parts = value.split(`; ${name}=`);
+       if (parts.length === 2) {
+         const cookieValue = parts.pop();
+         return cookieValue ? cookieValue.split(';').shift() || null : null;
+       }
+       return null;
+     };
+     
+     return getCookie('access_token');
+   }, []);
 
   const getAuthHeaders = useCallback((): Record<string, string> => {
     const token = getToken();

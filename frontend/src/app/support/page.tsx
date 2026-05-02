@@ -121,7 +121,7 @@ export default function GlobalResolutionCenter() {
       return null;
     };
     
-    return getCookie('klip_token');
+    return getCookie('access_token');
   }, []);
 
   // Standardized headers function
@@ -136,15 +136,15 @@ export default function GlobalResolutionCenter() {
     return now - loginTimestamp > TOKEN_EXPIRY;
   }, []);
 
-  // Clear auth data and redirect to login
-  const handleAuthError = useCallback(() => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('klip_user');
-    localStorage.removeItem('login_timestamp');
-    document.cookie = 'klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-    document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-    router.push('/auth/login?reason=expired');
-  }, [router]);
+     // Clear auth data and redirect to login
+   const handleAuthError = useCallback(() => {
+     localStorage.removeItem('auth_token');
+     localStorage.removeItem('klip_user');
+     localStorage.removeItem('login_timestamp');
+     document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+     document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+     router.push('/auth/login?reason=expired');
+   }, [router]);
 
   // Get user identity from localStorage (matching other pages)
   useEffect(() => {

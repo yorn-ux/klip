@@ -48,11 +48,11 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
     </div>
   );
 
-  // Auth helper
-  const getAuthToken = () => {
-    return localStorage.getItem('auth_token') || 
-           document.cookie.split('; ').find(row => row.startsWith('klip_token='))?.split('=')[1];
-  };
+   // Auth helper
+   const getAuthToken = () => {
+     return localStorage.getItem('auth_token') || 
+            document.cookie.split('; ').find(row => row.startsWith('access_token='))?.split('=')[1];
+   };
 
 
   // Cleanup polling on unmount

@@ -5,8 +5,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // Get token from cookies OR headers (for API responses)
-  let token = request.cookies.get('access_token')?.value || 
-              request.cookies.get('klip_token')?.value;
+  let token = request.cookies.get('access_token')?.value;
   
   // Also check Authorization header (for API calls)
   const authHeader = request.headers.get('authorization');

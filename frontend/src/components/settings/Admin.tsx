@@ -91,7 +91,7 @@ export default function AdminSettings() {
       return null;
     };
     
-    return getCookie('klip_token');
+     return getCookie('access_token');
   };
 
   // Helper function to get auth headers
@@ -137,12 +137,12 @@ export default function AdminSettings() {
         fetch(`${API_BASE_URL}/api/v1/admin/broadcasts`, { headers })
       ]);
 
-      if (platformRes.status === 401 || riskRes.status === 401 || broadcastsRes.status === 401) {
-        localStorage.removeItem('auth_token');
-        document.cookie = 'klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-        router.push('/auth/login');
-        throw new Error('Session expired. Please login again.');
-      }
+       if (platformRes.status === 401 || riskRes.status === 401 || broadcastsRes.status === 401) {
+         localStorage.removeItem('auth_token');
+         document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+         router.push('/auth/login');
+         throw new Error('Session expired. Please login again.');
+       }
 
       if (!platformRes.ok || !riskRes.ok || !broadcastsRes.ok) {
         throw new Error('Failed to fetch admin data');

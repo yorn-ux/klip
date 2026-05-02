@@ -82,26 +82,26 @@ interface NotificationState {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const API_VERSION = 'api/v1';
 
-// Get token from cookie with better parsing
-const getToken = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  
-  try {
-    const cookie = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('klip_token='));
+  // Get token from cookie with better parsing
+  const getToken = (): string | null => {
+    if (typeof window === 'undefined') return null;
     
-    if (cookie) {
-      const token = cookie.split('=')[1];
-      if (token) return decodeURIComponent(token);
+    try {
+      const cookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('access_token='));
+      
+      if (cookie) {
+        const token = cookie.split('=')[1];
+        if (token) return decodeURIComponent(token);
+      }
+      
+      return localStorage.getItem('auth_token');
+    } catch (error) {
+      console.error('Error reading token:', error);
+      return null;
     }
-    
-    return localStorage.getItem('auth_token');
-  } catch (error) {
-    console.error('Error reading token:', error);
-    return null;
-  }
-};
+  };
 
 // Helper to make authenticated requests
 const authenticatedFetch = async (url: string, options: RequestInit = {}) => {

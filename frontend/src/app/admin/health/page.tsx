@@ -95,7 +95,7 @@ export default function NodeHealth() {
       return null;
     };
     
-    return getCookie('klip_token');
+     return getCookie('access_token');
   };
 
   const getAuthHeaders = (): Record<string, string> => {
@@ -164,9 +164,9 @@ export default function NodeHealth() {
       ]);
 
       if (statusRes.status === 401 || systemInfoRes.status === 401) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('klip_user');
-        document.cookie = 'klip_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+         localStorage.removeItem('auth_token');
+         localStorage.removeItem('klip_user');
+         document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
         router.push('/auth/login');
         return;
       }

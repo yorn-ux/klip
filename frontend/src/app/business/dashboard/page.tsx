@@ -40,16 +40,16 @@ export default function BusinessDashboard() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   const KES_TO_USD = 0.0076;
 
-  // Get auth token from cookies
-  const getAuthToken = useCallback(() => {
-    if (typeof document === 'undefined') return null;
-    const getCookie = (name: string) => {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) return parts.pop()?.split(';').shift();
-    };
-    return getCookie('klip_token') || localStorage.getItem('auth_token');
-  }, []);
+   // Get auth token from cookies
+   const getAuthToken = useCallback(() => {
+     if (typeof document === 'undefined') return null;
+     const getCookie = (name: string) => {
+       const value = `; ${document.cookie}`;
+       const parts = value.split(`; ${name}=`);
+       if (parts.length === 2) return parts.pop()?.split(';').shift();
+     };
+     return getCookie('access_token') || localStorage.getItem('auth_token');
+   }, []);
 
   // Get user identity from localStorage
   useEffect(() => {

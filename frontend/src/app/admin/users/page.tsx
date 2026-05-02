@@ -78,25 +78,25 @@ export default function OperatorLedger() {
   const router = useRouter();
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-  // EXACT same token function as Admin Dashboard
-  const getToken = useCallback((): string | null => {
-    if (typeof window === 'undefined') return null;
-    
-    const localToken = localStorage.getItem('auth_token');
-    if (localToken) return localToken;
-    
-    const getCookie = (name: string): string | null => {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) {
-        const cookieValue = parts.pop();
-        return cookieValue ? cookieValue.split(';').shift() || null : null;
-      }
-      return null;
-    };
-    
-    return getCookie('klip_token');
-  }, []);
+   // EXACT same token function as Admin Dashboard
+   const getToken = useCallback((): string | null => {
+     if (typeof window === 'undefined') return null;
+     
+     const localToken = localStorage.getItem('auth_token');
+     if (localToken) return localToken;
+     
+     const getCookie = (name: string): string | null => {
+       const value = `; ${document.cookie}`;
+       const parts = value.split(`; ${name}=`);
+       if (parts.length === 2) {
+         const cookieValue = parts.pop();
+         return cookieValue ? cookieValue.split(';').shift() || null : null;
+       }
+       return null;
+     };
+     
+     return getCookie('access_token');
+   }, []);
 
   // EXACT same headers function as Admin Dashboard
   const getAuthHeaders = useCallback((): Record<string, string> => {
