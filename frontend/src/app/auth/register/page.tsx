@@ -7,17 +7,18 @@ import {
   Loader2, ArrowRight, Eye, EyeOff, Mail, Lock, 
   Building2, ChevronLeft, ShieldCheck, 
   AlertCircle, CheckCircle2, Key, 
-  Check, X
+  Check, X, User, Briefcase, Shield
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/useNotificationStore';
 
 // --- Types ---
-type UserRole = 'INFLUENCER' | 'BUSINESS';
+type UserRole = 'INFLUENCER' | 'BUSINESS' | 'ADMIN';
 
 interface RegistrationData {
   email: string;
   fullName: string;
   operatorId: string;
+  role: string;
   requiresVerification: boolean;
 }
 
@@ -32,18 +33,15 @@ const generateSecurePassword = (): string => {
   const allChars = uppercase + lowercase + numbers + symbols;
   
   let password = '';
-  // Ensure at least one from each category
   password += uppercase[Math.floor(Math.random() * uppercase.length)];
   password += lowercase[Math.floor(Math.random() * lowercase.length)];
   password += numbers[Math.floor(Math.random() * numbers.length)];
   password += symbols[Math.floor(Math.random() * symbols.length)];
   
-  // Fill the rest
   for (let i = password.length; i < length; i++) {
     password += allChars[Math.floor(Math.random() * allChars.length)];
   }
   
-  // Shuffle
   return password.split('').sort(() => Math.random() - 0.5).join('');
 };
 
@@ -79,6 +77,21 @@ const validatePassword = (password: string, confirmPassword: string): PasswordVa
   };
 };
 
+// Role-based dashboard routing
+const getDashboardRoute = (role: string): string => {
+  const roleLower = role.toLowerCase();
+  switch (roleLower) {
+    case 'admin':
+      return '/admin/dashboard';
+    case 'business':
+      return '/business/dashboard';
+    case 'influencer':
+      return '/influencer/dashboard';
+    default:
+      return '/client/dashboard';
+  }
+};
+
 export default function RegistrationPage() {
   const router = useRouter();
   const { showToast } = useNotificationStore();
@@ -100,6 +113,7 @@ export default function RegistrationPage() {
   const [registrationData, setRegistrationData] = useState<RegistrationData | null>(null);
   const [verificationCode, setVerificationCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   
   // Password validation
   const passwordValidation = validatePassword(formData.password, formData.confirmPassword);
@@ -157,18 +171,26 @@ export default function RegistrationPage() {
         email: formData.email,
         fullName: payloadName,
         operatorId: data.operator_id,
+        role: formData.role.toLowerCase(),
         requiresVerification: data.requires_verification || false
       });
 
-      // If verification is required, go to verification step
       if (data.requires_verification) {
         setStep(2);
+        setCountdown(60);
+        const timer = setInterval(() => {
+          setCountdown(prev => {
+            if (prev <= 1) clearInterval(timer);
+            return prev - 1;
+          });
+        }, 1000);
         showToast("Verification code sent to your email", "success");
       } else {
-        // Auto-login for admin/business invites
         if (data.access_token) {
           localStorage.setItem('access_token', data.access_token);
-          router.push('/client/dashboard');
+          localStorage.setItem('user_role', formData.role.toLowerCase());
+          const dashboardRoute = getDashboardRoute(formData.role);
+          router.push(dashboardRoute);
         } else {
           setStep(3);
           showToast("Account created successfully", "success");
@@ -202,9 +224,9 @@ export default function RegistrationPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Verification failed");
 
-      // Store the access token
       if (data.access_token) {
         localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('user_role', registrationData?.role || 'influencer');
       }
       
       showToast("Email verified successfully!", "success");
@@ -217,6 +239,11 @@ export default function RegistrationPage() {
   };
 
   const resendVerificationCode = async () => {
+    if (countdown > 0) {
+      showToast(`Please wait ${countdown} seconds before resending`, "info");
+      return;
+    }
+    
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const res = await fetch(`${API_URL}/api/v1/auth/resend-verification`, {
@@ -226,6 +253,13 @@ export default function RegistrationPage() {
       });
 
       if (res.ok) {
+        setCountdown(60);
+        const timer = setInterval(() => {
+          setCountdown(prev => {
+            if (prev <= 1) clearInterval(timer);
+            return prev - 1;
+          });
+        }, 1000);
         showToast("New verification code sent to your email", "success");
       } else {
         showToast("Failed to resend code. Please try again.", "error");
@@ -233,6 +267,12 @@ export default function RegistrationPage() {
     } catch (err) {
       showToast("Failed to resend code", "error");
     }
+  };
+
+  const handleDashboardRedirect = () => {
+    const role = registrationData?.role || 'influencer';
+    const dashboardRoute = getDashboardRoute(role);
+    router.push(dashboardRoute);
   };
 
   // Password strength color and label
@@ -245,6 +285,22 @@ export default function RegistrationPage() {
   };
   
   const strength = getStrengthLabel();
+
+  // Role icon and description
+  const getRoleInfo = (role: UserRole) => {
+    switch(role) {
+      case 'INFLUENCER':
+        return { icon: User, title: 'Creator', description: 'Join campaigns, earn rewards' };
+      case 'BUSINESS':
+        return { icon: Briefcase, title: 'Business', description: 'Launch campaigns, manage team' };
+      case 'ADMIN':
+        return { icon: Shield, title: 'Admin', description: 'Platform management' };
+      default:
+        return { icon: User, title: 'Creator', description: 'Join campaigns, earn rewards' };
+    }
+  };
+
+  const roleInfo = getRoleInfo(formData.role);
 
   return (
     <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans selection:bg-amber-100">
@@ -270,33 +326,42 @@ export default function RegistrationPage() {
               <span className="text-amber-400 text-2xl font-black">K</span>
             </div>
             <h1 className="text-2xl font-bold tracking-tight">
-              {step === 1 ? "Create your account" : step === 2 ? "Verify your email" : "Welcome to Klip"}
+              {step === 1 ? "Create your account" : step === 2 ? "Verify your email" : `Welcome, ${registrationData?.fullName?.split(' ')[0] || 'there'}!`}
             </h1>
             <p className="text-slate-500 text-sm mt-1.5">
               {step === 1 
                 ? "Join the next generation of payment infrastructure" 
                 : step === 2 
                 ? "Enter the 6-digit code sent to your email"
-                : "Your account is ready to use"}
+                : `Your ${registrationData?.role || ''} account is ready`}
             </p>
           </div>
 
           {/* STEP 1: REGISTRATION FORM */}
           {step === 1 && (
             <form onSubmit={handleRegister} className="space-y-5">
-              {/* Role Selector */}
-              <div className="grid grid-cols-2 gap-3 p-1 bg-slate-50 rounded-xl border border-slate-100">
-                {(['INFLUENCER', 'BUSINESS'] as UserRole[]).map((r) => (
-                  <button
-                    key={r} type="button"
-                    onClick={() => setFormData({ ...formData, role: r })}
-                    className={`py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
-                      formData.role === r ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'
-                    }`}
-                  >
-                    {r === 'INFLUENCER' ? 'Creator/Individual' : 'Brand / Agency'}
-                  </button>
-                ))}
+              {/* Role Selector - Now with 3 roles */}
+              <div className="grid grid-cols-3 gap-2 p-1 bg-slate-50 rounded-xl border border-slate-100">
+                {(['INFLUENCER', 'BUSINESS', 'ADMIN'] as UserRole[]).map((r) => {
+                  const { icon: Icon, title } = getRoleInfo(r);
+                  return (
+                    <button
+                      key={r} type="button"
+                      onClick={() => setFormData({ ...formData, role: r })}
+                      className={`py-2 px-1 text-xs font-bold uppercase tracking-wider rounded-lg transition-all flex flex-col items-center gap-1 ${
+                        formData.role === r ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                      }`}
+                    >
+                      <Icon size={14} />
+                      <span>{title}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Role description */}
+              <div className="text-center text-xs text-slate-400">
+                {roleInfo.description}
               </div>
 
               <div className="space-y-4">
@@ -338,7 +403,7 @@ export default function RegistrationPage() {
                   />
                 </div>
 
-                {/* Password Field with Generate Button */}
+                {/* Password Field */}
                 <div className="space-y-2">
                   <div className="relative group">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={18} />
@@ -474,7 +539,7 @@ export default function RegistrationPage() {
             </form>
           )}
 
-          {/* STEP 2: EMAIL VERIFICATION (No recovery phrase) */}
+          {/* STEP 2: EMAIL VERIFICATION */}
           {step === 2 && registrationData && (
             <div className="space-y-6 animate-in zoom-in-95 duration-500">
               <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex gap-3 items-start">
@@ -505,15 +570,16 @@ export default function RegistrationPage() {
 
                 <button 
                   onClick={resendVerificationCode}
-                  className="w-full text-sm text-slate-500 hover:text-slate-700 transition-colors"
+                  disabled={countdown > 0}
+                  className="w-full text-sm text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50"
                 >
-                  Didn't receive code? Click to resend
+                  {countdown > 0 ? `Resend code in ${countdown}s` : "Didn't receive code? Click to resend"}
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 3: SUCCESS / FINAL REDIRECT */}
+          {/* STEP 3: SUCCESS - Role-based redirect */}
           {step === 3 && registrationData && (
             <div className="text-center space-y-6 animate-in fade-in scale-95">
               <div className="flex justify-center">
@@ -526,12 +592,15 @@ export default function RegistrationPage() {
                 <p className="text-slate-500 text-sm mt-1">
                   Operator ID: <span className="font-mono text-slate-800 text-xs bg-slate-100 px-2 py-0.5 rounded">{registrationData.operatorId}</span>
                 </p>
+                <p className="text-slate-400 text-xs mt-2">
+                  Role: <span className="capitalize font-medium">{registrationData.role}</span>
+                </p>
               </div>
               <button 
-                onClick={() => router.push('/client/dashboard')}
-                className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold transition-all"
+                onClick={handleDashboardRedirect}
+                className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold transition-all flex justify-center items-center gap-2"
               >
-                Enter dashboard
+                Go to {registrationData.role} Dashboard <ArrowRight size={18} />
               </button>
             </div>
           )}
