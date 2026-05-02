@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState,} from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Loader2, ArrowRight, Eye, EyeOff, Mail, Lock, 
   Building2, ChevronLeft, ShieldCheck, 
-  AlertCircle, CheckCircle2, Copy, Key, 
+  AlertCircle, CheckCircle2, Key, 
   Check, X
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/useNotificationStore';
@@ -18,7 +18,7 @@ interface RegistrationData {
   email: string;
   fullName: string;
   operatorId: string;
-  recoveryPhrase: string;
+  requiresVerification: boolean;
 }
 
 // --- Password Generation Helper ---
@@ -88,7 +88,6 @@ export default function RegistrationPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   
   // --- Form Data ---
@@ -99,6 +98,8 @@ export default function RegistrationPage() {
   });
 
   const [registrationData, setRegistrationData] = useState<RegistrationData | null>(null);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
   
   // Password validation
   const passwordValidation = validatePassword(formData.password, formData.confirmPassword);
@@ -111,7 +112,6 @@ export default function RegistrationPage() {
   // --- Generate Suggested Password ---
   const handleGeneratePassword = () => {
     setIsGenerating(true);
-    // Small delay for animation effect
     setTimeout(() => {
       const newPassword = generateSecurePassword();
       setFormData(prev => ({ 
@@ -157,11 +157,23 @@ export default function RegistrationPage() {
         email: formData.email,
         fullName: payloadName,
         operatorId: data.operator_id,
-        recoveryPhrase: data.recovery_phrase
+        requiresVerification: data.requires_verification || false
       });
 
-      setStep(2);
-      showToast("Account created successfully", "success");
+      // If verification is required, go to verification step
+      if (data.requires_verification) {
+        setStep(2);
+        showToast("Verification code sent to your email", "success");
+      } else {
+        // Auto-login for admin/business invites
+        if (data.access_token) {
+          localStorage.setItem('access_token', data.access_token);
+          router.push('/client/dashboard');
+        } else {
+          setStep(3);
+          showToast("Account created successfully", "success");
+        }
+      }
     } catch (err: any) {
       showToast(err.message, "error");
     } finally {
@@ -169,12 +181,58 @@ export default function RegistrationPage() {
     }
   };
 
-  const copyToClipboard = () => {
-    if (!registrationData) return;
-    navigator.clipboard.writeText(registrationData.recoveryPhrase);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    showToast("Recovery phrase copied", "success");
+  const handleVerifyEmail = async () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      showToast("Please enter the 6-digit verification code", "error");
+      return;
+    }
+
+    setIsVerifying(true);
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${API_URL}/api/v1/auth/verify-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: registrationData?.email,
+          code: verificationCode
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Verification failed");
+
+      // Store the access token
+      if (data.access_token) {
+        localStorage.setItem('access_token', data.access_token);
+      }
+      
+      showToast("Email verified successfully!", "success");
+      setStep(3);
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const resendVerificationCode = async () => {
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${API_URL}/api/v1/auth/resend-verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: registrationData?.email }),
+      });
+
+      if (res.ok) {
+        showToast("New verification code sent to your email", "success");
+      } else {
+        showToast("Failed to resend code. Please try again.", "error");
+      }
+    } catch (err) {
+      showToast("Failed to resend code", "error");
+    }
   };
 
   // Password strength color and label
@@ -199,7 +257,7 @@ export default function RegistrationPage() {
         </Link>
         <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-400 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
           <ShieldCheck size={12} className={step === 3 ? "text-emerald-500" : "text-amber-500"} />
-          {step === 1 ? "Identification" : step === 2 ? "Security Backup" : "Complete"}
+          {step === 1 ? "Registration" : step === 2 ? "Verify Email" : "Complete"}
         </div>
       </header>
 
@@ -212,10 +270,14 @@ export default function RegistrationPage() {
               <span className="text-amber-400 text-2xl font-black">K</span>
             </div>
             <h1 className="text-2xl font-bold tracking-tight">
-              {step === 1 ? "Create your account" : "Secure your workspace"}
+              {step === 1 ? "Create your account" : step === 2 ? "Verify your email" : "Welcome to Klip"}
             </h1>
             <p className="text-slate-500 text-sm mt-1.5">
-              {step === 1 ? "Join the next generation of infrastructure" : "This phrase is the only way to recover your account."}
+              {step === 1 
+                ? "Join the next generation of payment infrastructure" 
+                : step === 2 
+                ? "Enter the 6-digit code sent to your email"
+                : "Your account is ready to use"}
             </p>
           </div>
 
@@ -398,7 +460,7 @@ export default function RegistrationPage() {
                   onChange={e => setFormData({...formData, acceptTerms: e.target.checked})}
                 />
                 <label htmlFor="terms" className="text-xs text-slate-500 leading-relaxed">
-                  I agree to the <span className="text-slate-900 font-medium underline cursor-pointer">Terms of Service</span> and understand the risks of digital asset management.
+                  I agree to the <span className="text-slate-900 font-medium underline cursor-pointer">Terms of Service</span> and understand the platform's security practices.
                 </label>
               </div>
 
@@ -412,38 +474,40 @@ export default function RegistrationPage() {
             </form>
           )}
 
-          {/* STEP 2: RECOVERY PHRASE (Post-API) */}
+          {/* STEP 2: EMAIL VERIFICATION (No recovery phrase) */}
           {step === 2 && registrationData && (
             <div className="space-y-6 animate-in zoom-in-95 duration-500">
-              <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl flex gap-3 items-start">
-                <AlertCircle className="text-amber-600 shrink-0" size={18} />
-                <p className="text-xs text-amber-800 leading-relaxed font-medium">
-                  Write these 12 words down on paper. If you lose them, KLIP cannot recover your account or your funds.
-                </p>
+              <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex gap-3 items-start">
+                <AlertCircle className="text-blue-600 shrink-0" size={18} />
+                <div className="text-xs text-blue-800 leading-relaxed">
+                  <p className="font-medium mb-1">Check your email</p>
+                  <p>We've sent a 6-digit verification code to <span className="font-mono">{registrationData.email}</span></p>
+                </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                {registrationData.recoveryPhrase.split(' ').map((word, i) => (
-                  <div key={i} className="bg-slate-50 border border-slate-100 p-2.5 rounded-lg flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-slate-300 w-4">{i + 1}</span>
-                    <span className="text-sm font-mono font-medium text-slate-700">{word}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex flex-col gap-3">
+              <div className="space-y-3">
+                <input 
+                  type="text"
+                  maxLength={6}
+                  placeholder="Enter 6-digit code"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                  className="w-full px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-slate-300 focus:ring-2 focus:ring-slate-900/10 transition-all outline-none"
+                />
+                
                 <button 
-                  onClick={copyToClipboard}
-                  className="w-full py-3 border-2 border-slate-100 hover:bg-slate-50 rounded-xl font-medium flex justify-center items-center gap-2 transition-colors"
+                  onClick={handleVerifyEmail}
+                  disabled={isVerifying || verificationCode.length !== 6}
+                  className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold transition-all flex justify-center items-center gap-2 disabled:opacity-50"
                 >
-                  {copied ? <CheckCircle2 className="text-emerald-500" size={16} /> : <Copy size={16} />}
-                  {copied ? "Copied to clipboard" : "Copy recovery phrase"}
+                  {isVerifying ? <Loader2 className="animate-spin" size={18} /> : <>Verify Email <CheckCircle2 size={16} /></>}
                 </button>
+
                 <button 
-                  onClick={() => setStep(3)}
-                  className="w-full py-3.5 bg-slate-900 text-white rounded-xl font-semibold flex justify-center items-center gap-2"
+                  onClick={resendVerificationCode}
+                  className="w-full text-sm text-slate-500 hover:text-slate-700 transition-colors"
                 >
-                  I've secured my phrase <ArrowRight size={16} />
+                  Didn't receive code? Click to resend
                 </button>
               </div>
             </div>
@@ -458,12 +522,14 @@ export default function RegistrationPage() {
                 </div>
               </div>
               <div>
-                <h2 className="text-xl font-bold">Setup complete</h2>
-                <p className="text-slate-500 text-sm mt-1">Operator ID: <span className="font-mono text-slate-800 text-xs bg-slate-100 px-2 py-0.5 rounded">{registrationData.operatorId}</span></p>
+                <h2 className="text-xl font-bold">Account verified!</h2>
+                <p className="text-slate-500 text-sm mt-1">
+                  Operator ID: <span className="font-mono text-slate-800 text-xs bg-slate-100 px-2 py-0.5 rounded">{registrationData.operatorId}</span>
+                </p>
               </div>
               <button 
                 onClick={() => router.push('/client/dashboard')}
-                className="w-full py-3.5 bg-slate-900 text-white rounded-xl font-semibold"
+                className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold transition-all"
               >
                 Enter dashboard
               </button>
@@ -474,7 +540,7 @@ export default function RegistrationPage() {
 
       {/* Footer */}
       <footer className="p-6 flex flex-col md:flex-row items-center justify-between gap-3 border-t border-slate-100">
-        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">© 2025 KLIP Secure Infrastructure</p>
+        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">© 2025 Klip Secure Infrastructure</p>
         <div className="flex gap-6">
           <Link href="/privacy" className="text-[10px] text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-wider font-medium">Privacy</Link>
           <Link href="/terms" className="text-[10px] text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-wider font-medium">Protocol</Link>
