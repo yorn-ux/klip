@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, JSON, DateTime, Text, Index
+from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, JSON, DateTime, Text, Index, event
 from sqlalchemy.orm import relationship
 import datetime
 from app.database import Base
@@ -45,7 +45,7 @@ class UserSettings(Base):
     
     # 3. Liquidity Rails
     payout_method = Column(String, default="paypal")
-    paypal_email = Column(String, nullable=True)
+    paypal_email = Column(String, nullable=True)  # Already nullable, good!
     crypto_address = Column(String, nullable=True)
     min_payout_threshold = Column(Float, default=1000.0)
     auto_withdraw = Column(Boolean, default=False)
@@ -95,6 +95,15 @@ class UserSettings(Base):
     
     def __repr__(self):
         return f"<UserSettings user_id={self.user_id} username={self.username}>"
+
+
+# Optional: Add event listener to convert empty strings to NULL for email fields
+@event.listens_for(UserSettings, 'before_insert')
+@event.listens_for(UserSettings, 'before_update')
+def convert_empty_strings_to_null(mapper, connection, target):
+    """Convert empty strings to NULL for email fields"""
+    if target.paypal_email == '':
+        target.paypal_email = None
 
 
 class BusinessMetadata(Base):

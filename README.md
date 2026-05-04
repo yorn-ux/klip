@@ -1,77 +1,57 @@
-🚀 Overview
+# Klip
+
 Klip is a full-stack fintech solution that enables users to manage traditional and cryptocurrency payments, create fundraising campaigns, handle business transactions, and resolve disputes — all in one unified platform.
 
-✨ Features
-🔐 Authentication & Security
-User Registration & Login — Secure account creation with email verification.
+## Features
 
-Password Recovery — Recovery phrase-based account restoration.
+### 🔐 Authentication & Security
+- User Registration & Login — Secure account creation with email verification.
+- Password Recovery — Recovery phrase-based account restoration.
+- Session Management — Active session monitoring with security controls.
+- Two-Factor Authentication — Enhanced account protection.
+- Role-Based Access — Admin, Business, and Client user roles.
 
-Session Management — Active session monitoring with security controls.
+### 💰 Wallet Management
+- Multi-Currency Support — Manage multiple currency wallets.
+- Crypto Wallet Integration — Support for USDT on:
+  - Binance Smart Chain (BEP20)
+  - Ethereum (ERC20)
+- Fiat Payments — Stripe integration for card payments.
+- Mobile Money — M-Pesa integration for Kenya and East Africa.
+- Fund Conversions — Convert between crypto and fiat seamlessly.
 
-Two-Factor Authentication — Enhanced account protection.
+### 🏦 Vaults & Campaigns
+- Fundraising Campaigns — Create and manage campaign vaults.
+- Campaign Applications — Accept applications for campaign funding.
+- Campaign Analytics — Track funding progress and contributor metrics.
+- Secure Fund Release — Controlled release of campaign funds.
 
-Role-Based Access — Admin, Business, and Client user roles.
+### 🏢 Business Services
+- API Key Management — Generate and manage business API keys for Klip integrations.
+- Team Management — Add and manage team members with specific roles.
+- Business Analytics — Comprehensive business insights and reporting.
+- Webhook Integration — Real-time event notifications for external apps.
 
-💰 Wallet Management
-Multi-Currency Support — Manage multiple currency wallets.
+### 🛡️ Dispute Resolution
+- Support Tickets — Create and track support requests.
+- Dispute Management — Formal dispute filing and resolution workflow.
+- Ticket History — Complete audit trail of all support interactions.
 
-Crypto Wallet Integration — Support for USDT on:
+### 📱 Notifications
+- Real-Time Alerts — Instant notification delivery via Klip's engine.
+- Notification Preferences — Customizable notification settings.
+- Multi-Channel — Email and in-app notifications.
 
-Binance Smart Chain (BEP20)
+### ⚙️ Admin Dashboard
+- User Management — Full user administration capabilities.
+- Audit Logs — Comprehensive activity tracking.
+- Health Monitoring — System health and performance metrics.
+- Security Controls — Platform-wide security configuration.
 
-Ethereum (ERC20)
+## 🏗️ Architecture
 
-Fiat Payments — Stripe integration for card payments.
-
-Mobile Money — M-Pesa integration for Kenya and East Africa.
-
-Fund Conversions — Convert between crypto and fiat seamlessly.
-
-🏦 Vaults & Campaigns
-Fundraising Campaigns — Create and manage campaign vaults.
-
-Campaign Applications — Accept applications for campaign funding.
-
-Campaign Analytics — Track funding progress and contributor metrics.
-
-Secure Fund Release — Controlled release of campaign funds.
-
-🏢 Business Services
-API Key Management — Generate and manage business API keys for Klip integrations.
-
-Team Management — Add and manage team members with specific roles.
-
-Business Analytics — Comprehensive business insights and reporting.
-
-Webhook Integration — Real-time event notifications for external apps.
-
-🛡️ Dispute Resolution
-Support Tickets — Create and track support requests.
-
-Dispute Management — Formal dispute filing and resolution workflow.
-
-Ticket History — Complete audit trail of all support interactions.
-
-📱 Notifications
-Real-Time Alerts — Instant notification delivery via Klip's engine.
-
-Notification Preferences — Customizable notification settings.
-
-Multi-Channel — Email and in-app notifications.
-
-⚙️ Admin Dashboard
-User Management — Full user administration capabilities.
-
-Audit Logs — Comprehensive activity tracking.
-
-Health Monitoring — System health and performance metrics.
-
-Security Controls — Platform-wide security configuration.
-
-🏗️ Architecture
-Backend (FastAPI)
-Plaintext
+### Backend (FastAPI)
+```
 backend/
 ├── app/
 │   ├── core/         # Security and core utilities
@@ -87,8 +67,10 @@ backend/
 ├── main.py           # Application entry point
 ├── config.py         # Configuration management
 └── database.py       # Database setup
-Frontend (Next.js)
-Plaintext
+```
+
+### Frontend (Next.js)
+```
 frontend/
 ├── src/
 │   ├── app/           # Next.js App Router pages
@@ -105,75 +87,75 @@ frontend/
 │   └── store/         # State management
 ├── public/            # Static assets
 └── package.json       # Dependencies
-🛠️ Tech Stack
-Backend
-Framework: FastAPI
+```
 
-Database: SQLAlchemy (PostgreSQL/SQLite)
+## 🛠️ Tech Stack
 
-Authentication: JWT, OAuth, Bcrypt
+### Backend
+- **Framework:** FastAPI
+- **Database:** SQLAlchemy (PostgreSQL/SQLite)
+- **Authentication:** JWT, OAuth, Bcrypt
+- **Crypto:** Web3.py, eth-account
+- **Payments:** Stripe, M-Pesa (Intasend)
+- **Email:** Resend
+- **Cache:** Redis
 
-Crypto: Web3.py, eth-account
+### Frontend
+- **Framework:** Next.js 14+ (App Router)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS
+- **Icons:** Lucide React
+- **State:** Zustand
+- **HTTP:** Axios
 
-Payments: Stripe, M-Pesa (Intasend)
+## 🚦 Getting Started
 
-Email: Resend
+### Prerequisites
+- Python 3.10+
+- Node.js 18+
+- PostgreSQL (optional, SQLite for development)
 
-Cache: Redis
+### Backend Setup
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+2. Create a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate # On Windows: venv\Scripts\activate
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Configure environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+   (Edit `.env` with your specific Klip keys)
+5. Run the server:
+   ```bash
+   uvicorn main:app --reload
+   ```
 
-Frontend
-Framework: Next.js 14+ (App Router)
+### Frontend Setup
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
+4. The Klip interface will be available at <http://localhost:3000>
 
-Language: TypeScript
+## 📄 License
+This project is licensed under the MIT License.
 
-Styling: Tailwind CSS
-
-Icons: Lucide React
-
-State: Zustand
-
-HTTP: Axios
-
-🚦 Getting Started
-Prerequisites
-Python 3.10+
-
-Node.js 18+
-
-PostgreSQL (optional, SQLite for development)
-
-Backend Setup
-Navigate to the backend directory:
-cd backend
-
-Create a virtual environment:
-python -m venv venv
-source venv/bin/activate # On Windows: venv\Scripts\activate
-
-Install dependencies:
-pip install -r requirements.txt
-
-Configure environment variables:
-cp .env.example .env
-(Edit .env with your specific Klip keys)
-
-Run the server:
-uvicorn main:app --reload
-
-Frontend Setup
-Navigate to the frontend directory:
-cd frontend
-
-Install dependencies:
-npm install
-
-Run the development server:
-npm run dev
-
-The Klip interface will be available at http://localhost:3000
-
-📄 License
-MIT License
-
-👥 Contributing
+## 👥 Contributing
 Contributions to Klip are welcome! Please read our contributing guidelines before submitting pull requests.

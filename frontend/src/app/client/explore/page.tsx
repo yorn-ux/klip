@@ -18,7 +18,7 @@ interface Campaign {
   currency: string;
   payout_method: 'M-Pesa' | 'Web3';
   deadline: string;
-  category: 'UGC' | 'Reels' | 'Stories' | 'Video' | 'Articles' | 'Social Media' | 'Design';
+  category: string;
   is_verified: boolean;
   slots_available?: number;
   applications_count?: number;
@@ -36,12 +36,25 @@ export default function CampaignBoard() {
   const loadCampaigns = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/campaigns`);
-      if (!response.ok) throw new Error('Marketplace synchronization failed');
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      // Use the CORRECT endpoint from your backend
+      const response = await fetch(`${API_URL}/api/v1/vaults/campaigns`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
-      setCampaigns(data);
+      console.log('Real campaigns from backend:', data);
+      
+      // Transform API response to match Campaign interface
+      const transformedCampaigns = transformCampaignData(data);
+      setCampaigns(transformedCampaigns);
+      
     } catch (err: any) {
-      showToast("Sync Error: Using cached registry", "error");
+      console.error('Failed to load campaigns:', err);
+      showToast(err.message || "Failed to load campaigns", "error");
+      setCampaigns([]);
     } finally {
       setIsLoading(false);
     }
@@ -51,8 +64,8 @@ export default function CampaignBoard() {
 
   const filteredGigs = useMemo(() => {
     return campaigns.filter(gig => {
-      const matchesSearch = gig.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            gig.company_name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = gig.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            gig.company_name?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesTab = activeTab === 'All' || gig.category === activeTab;
       return matchesSearch && matchesTab;
     });
@@ -114,7 +127,7 @@ export default function CampaignBoard() {
               <div>
                 <p className="text-xs text-gray-500">Avg. Budget</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  KES {Math.round(campaigns.reduce((acc, c) => acc + c.budget, 0) / (campaigns.length || 1)).toLocaleString()}
+                  KES {campaigns.length > 0 ? Math.round(campaigns.reduce((acc, c) => acc + (c.budget || 0), 0) / campaigns.length).toLocaleString() : '0'}
                 </p>
               </div>
             </div>
@@ -154,7 +167,7 @@ export default function CampaignBoard() {
                   <AlertCircle size={28} className="text-gray-300" />
                 </div>
                 <h3 className="text-base font-semibold text-gray-900">No campaigns found</h3>
-                <p className="text-sm text-gray-500 mt-1 mb-4">Try adjusting your search or filters</p>
+                <p className="text-sm text-gray-500 mt-1 mb-4">No active campaigns available at the moment</p>
                 <button 
                   onClick={() => {setSearchQuery(''); setActiveTab('All');}} 
                   className="inline-flex items-center gap-2 text-rose-600 text-sm font-medium hover:text-rose-700"
@@ -182,14 +195,13 @@ function CampaignCard({ gig, onClick }: { gig: Campaign; onClick: () => void }) 
       onClick={onClick}
       className="bg-white border border-gray-100 rounded-lg p-5 hover:border-rose-200 hover:shadow-md transition-all group cursor-pointer flex flex-col h-full"
     >
-      {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-rose-100 rounded-lg flex items-center justify-center text-rose-600 font-semibold text-base">
-            {gig.company_name[0]}
+            {gig.company_name?.[0] || 'B'}
           </div>
           <div>
-            <p className="text-xs text-gray-500">{gig.company_name}</p>
+            <p className="text-xs text-gray-500">{gig.company_name || 'Brand Partner'}</p>
             <h3 className="text-sm font-medium text-gray-900 group-hover:text-rose-600 transition-colors line-clamp-1">
               {gig.title}
             </h3>
@@ -200,14 +212,15 @@ function CampaignCard({ gig, onClick }: { gig: Campaign; onClick: () => void }) 
         )}
       </div>
 
-      {/* Tags */}
       <div className="flex flex-wrap gap-2 mb-4">
         <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
-          {gig.category}
+          {gig.category || 'Campaign'}
         </span>
-        <span className="px-2 py-0.5 bg-amber-50 text-amber-600 rounded text-xs flex items-center gap-1">
-          <Clock size={10} /> {gig.deadline}
-        </span>
+        {gig.deadline && (
+          <span className="px-2 py-0.5 bg-amber-50 text-amber-600 rounded text-xs flex items-center gap-1">
+            <Clock size={10} /> {gig.deadline}
+          </span>
+        )}
         {gig.payout_method === 'M-Pesa' ? (
           <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-xs">
             M-PESA
@@ -219,21 +232,19 @@ function CampaignCard({ gig, onClick }: { gig: Campaign; onClick: () => void }) 
         )}
       </div>
 
-      {/* Description placeholder */}
       <p className="text-xs text-gray-500 mb-4 line-clamp-2">
-        Create engaging content for {gig.company_name}'s upcoming campaign. 
-        {gig.category} content with quick turnaround.
+        Collaborate with {gig.company_name} on this {gig.category} campaign. 
+        Deliver engaging content and get paid securely.
       </p>
 
-      {/* Stats */}
       <div className="flex items-center gap-4 mb-4">
-        {gig.slots_available && (
+        {gig.slots_available && gig.slots_available > 0 && (
           <div className="flex items-center gap-1 text-xs text-gray-500">
             <Users size={12} />
             <span>{gig.slots_available} slots</span>
           </div>
         )}
-        {gig.applications_count && (
+        {gig.applications_count && gig.applications_count > 0 && (
           <div className="flex items-center gap-1 text-xs text-gray-500">
             <Eye size={12} />
             <span>{gig.applications_count} applied</span>
@@ -241,15 +252,14 @@ function CampaignCard({ gig, onClick }: { gig: Campaign; onClick: () => void }) 
         )}
       </div>
 
-      {/* Footer */}
       <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
         <div>
           <p className="text-xs text-gray-400">Budget</p>
           <div className="flex items-baseline gap-1">
             <span className="text-lg font-semibold text-gray-900">
-              {gig.budget.toLocaleString()}
+              {gig.budget?.toLocaleString() || '0'}
             </span>
-            <span className="text-xs text-gray-400">{gig.currency}</span>
+            <span className="text-xs text-gray-400">{gig.currency || 'KES'}</span>
           </div>
         </div>
         
@@ -261,4 +271,23 @@ function CampaignCard({ gig, onClick }: { gig: Campaign; onClick: () => void }) 
       </div>
     </div>
   );
+}
+
+// Transform your backend Campaign model to frontend Campaign interface
+function transformCampaignData(campaigns: any[]): Campaign[] {
+  if (!Array.isArray(campaigns)) return [];
+  
+  return campaigns.map((campaign: any) => ({
+    id: campaign.id,
+    company_name: campaign.company_name || 'Brand Partner',
+    title: campaign.title,
+    budget: Number(campaign.budget) || 0,
+    currency: campaign.currency || 'KES',
+    payout_method: campaign.payout_method === 'crypto' ? 'Web3' : 'M-Pesa',
+    deadline: campaign.deadline || 'Open',
+    category: campaign.category || 'Social Media',
+    is_verified: campaign.is_verified === true,
+    slots_available: campaign.slots_available || campaign.creator_count || 0,
+    applications_count: campaign.applications_count || 0,
+  }));
 }

@@ -22,6 +22,13 @@ router = APIRouter(tags=["User Settings"])
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
+# Helper function to safely get email (convert empty string to None)
+def safe_email_value(email: Optional[str]) -> Optional[str]:
+    """Convert empty string to None for email validation"""
+    if email is None or email == "":
+        return None
+    return email
+
 # ==================== USER SETTINGS ROUTES ====================
 
 @router.get("/sync", response_model=SovereignSyncResponse)
@@ -39,7 +46,7 @@ async def sync_user_settings(
         query = select(UserSettings).filter(UserSettings.user_id == user_id)
         user_settings = db.execute(query).scalar_one_or_none()
 
-        # 2. Build the Payload
+        # 2. Build the Payload - FIXED: Convert empty strings to None for email fields
         data_payload = {
             "profile": {
                 "node_id": user_id,
@@ -61,7 +68,8 @@ async def sync_user_settings(
                 }
             },
             "payments": {
-                "paypal_email": user_settings.paypal_email if user_settings else "",
+                # FIX: Convert empty string to None for paypal_email
+                "paypal_email": safe_email_value(user_settings.paypal_email if user_settings else None),
                 "crypto_address": user_settings.crypto_address if user_settings else "",
                 "payout_method": user_settings.payout_method if user_settings else "paypal",
                 "min_threshold": user_settings.min_payout_threshold if user_settings else 1000.0,
@@ -184,7 +192,11 @@ async def update_setting(
                 else:
                     field_name = mapping[0]
                     old_value = getattr(settings, field_name)
-                    setattr(settings, field_name, value)
+                    # For paypal_email, store empty string as None
+                    if field_name == "paypal_email" and value == "":
+                        setattr(settings, field_name, None)
+                    else:
+                        setattr(settings, field_name, value)
             else:
                 raise HTTPException(status_code=422, detail=f"Path '{path}' cannot be updated")
 
