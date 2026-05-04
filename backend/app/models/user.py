@@ -193,6 +193,22 @@ class User(Base):
         foreign_keys="[Application.operator_id]",
         cascade="all, delete-orphan"
     )
+    
+    # 13. Assigned Disputes (for admin) - FIXED
+    assigned_disputes = relationship(
+        "Dispute",
+        foreign_keys="[Dispute.assigned_admin]",
+        back_populates="admin",
+        primaryjoin="User.operator_id == Dispute.assigned_admin"
+    )
+    
+    # 14. Assigned Tickets (for admin/support agent) - FIXED
+    assigned_tickets = relationship(
+        "SupportTicket",
+        foreign_keys="[SupportTicket.assigned_agent]",
+        back_populates="agent",
+        primaryjoin="User.operator_id == SupportTicket.assigned_agent"
+    )
 
     def __repr__(self):
         return f"<User {self.operator_id} - {self.email} | Role: {self.role}>"
