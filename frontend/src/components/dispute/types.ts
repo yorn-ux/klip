@@ -1,3 +1,4 @@
+
 export type Role = 'influencer' | 'business' | 'admin' | 'operator';
 export type NavigationTab = 'disputes' | 'support' | 'history';
 
@@ -14,11 +15,19 @@ export interface SupportTicket {
   subject: string;
   category: string;
   status: 'PENDING' | 'ACTIVE' | 'RESOLVED' | 'CLOSED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | 'URGENT';
   createdAt: string;
   updatedAt?: string;
   message?: string;
   assignedAgent?: string;
+  resolvedAt?: string;
+  responses?: Array<{
+    admin: string;
+    timestamp: string;
+    message: string;
+  }>;
+  attachments?: string[];
+  resolutionNotes?: string;
 }
 
 export interface EvidenceItem {
