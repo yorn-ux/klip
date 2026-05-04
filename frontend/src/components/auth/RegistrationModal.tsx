@@ -11,7 +11,7 @@ interface RegistrationModalProps {
   isDark?: boolean;
 }
 
-function RegistrationModal({ isOpen, onClose, onRegister, onSuccess, isDark = false }: RegistrationModalProps) {
+function RegistrationModalComponent({ isOpen, onClose, onRegister, onSuccess, isDark = false }: RegistrationModalProps) {
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState('influencer');
@@ -25,7 +25,6 @@ function RegistrationModal({ isOpen, onClose, onRegister, onSuccess, isDark = fa
     setError('');
     
     try {
-      // Call the onRegister prop with the form data
       await onRegister({
         email: email.toLowerCase().trim(),
         full_name: fullName.trim(),
@@ -33,7 +32,6 @@ function RegistrationModal({ isOpen, onClose, onRegister, onSuccess, isDark = fa
         password: password
       });
       
-      // Reset form on success
       setEmail('');
       setFullName('');
       setPassword('');
@@ -43,7 +41,6 @@ function RegistrationModal({ isOpen, onClose, onRegister, onSuccess, isDark = fa
       if (onSuccess) onSuccess();
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please try again.');
-      console.error('Registration failed:', err);
     } finally {
       setLoading(false);
     }
@@ -68,7 +65,6 @@ function RegistrationModal({ isOpen, onClose, onRegister, onSuccess, isDark = fa
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className={`bg-white rounded-2xl max-w-md w-full shadow-2xl ${isDark ? 'dark' : ''}`}>
-        {/* Header */}
         <div className="p-6 border-b border-slate-200 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-bold text-slate-900">Register New User</h2>
@@ -80,7 +76,6 @@ function RegistrationModal({ isOpen, onClose, onRegister, onSuccess, isDark = fa
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Full Name */}
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-1">Full Name</label>
             <div className="relative">
@@ -96,7 +91,6 @@ function RegistrationModal({ isOpen, onClose, onRegister, onSuccess, isDark = fa
             </div>
           </div>
 
-          {/* Email */}
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-1">Email Address</label>
             <div className="relative">
@@ -112,7 +106,6 @@ function RegistrationModal({ isOpen, onClose, onRegister, onSuccess, isDark = fa
             </div>
           </div>
 
-          {/* Role Selection */}
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-1">Role</label>
             <div className="grid grid-cols-3 gap-2">
@@ -147,7 +140,6 @@ function RegistrationModal({ isOpen, onClose, onRegister, onSuccess, isDark = fa
             </p>
           </div>
 
-          {/* Password */}
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-1">Password</label>
             <div className="relative">
@@ -165,7 +157,6 @@ function RegistrationModal({ isOpen, onClose, onRegister, onSuccess, isDark = fa
             <p className="text-[10px] text-slate-400 mt-1">Must be at least 8 characters</p>
           </div>
 
-          {/* Error Message */}
           {error && (
             <div className="flex items-center gap-2 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 text-sm">
               <AlertCircle size={16} />
@@ -173,7 +164,6 @@ function RegistrationModal({ isOpen, onClose, onRegister, onSuccess, isDark = fa
             </div>
           )}
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
@@ -192,4 +182,7 @@ function RegistrationModal({ isOpen, onClose, onRegister, onSuccess, isDark = fa
   );
 }
 
-export default RegistrationModal;
+// Export BOTH as default AND named export to satisfy both import styles
+const RegistrationModal = RegistrationModalComponent;
+export { RegistrationModal };
+export default RegistrationModalComponent;
