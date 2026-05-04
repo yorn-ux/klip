@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Loader2, Mail, User,  } from 'lucide-react';
+import { X, Loader2, Mail, User, } from 'lucide-react';
 
 interface RegistrationModalProps {
   isOpen: boolean;
@@ -9,7 +9,7 @@ interface RegistrationModalProps {
   onSuccess?: () => void;
 }
 
-export default function RegistrationModal({ isOpen, onClose, onSuccess }: RegistrationModalProps) {
+function RegistrationModal({ isOpen, onClose, onSuccess }: RegistrationModalProps) {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState('influencer');
@@ -89,3 +89,7 @@ export default function RegistrationModal({ isOpen, onClose, onSuccess }: Regist
     </div>
   );
 }
+
+// Export both as default AND named export for compatibility
+export default RegistrationModal;
+export { RegistrationModal };
