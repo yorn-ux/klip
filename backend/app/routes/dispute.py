@@ -24,7 +24,7 @@ router = APIRouter(tags=["Dispute Protocol"])
 @router.get("/disputes", response_model=List[DisputeSchema])
 def get_disputes(
     role: str = Query("admin"), 
-    operator_id: Optional[str] = Query(None),  # FIXED: Use Query param, not just default
+    operator_id: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
     """
@@ -34,7 +34,6 @@ def get_disputes(
     query = db.query(Dispute)
     
     if role != "admin" and operator_id:
-        # Filter by initiator_id or counterparty_id for non-admin users
         query = query.filter(or_(
             Dispute.initiator_id == operator_id, 
             Dispute.counterparty_id == operator_id
@@ -55,7 +54,7 @@ def get_dispute_details(case_id: str, db: Session = Depends(get_db)):
 def submit_verdict(
     case_id: str, 
     verdict: str = Query(...), 
-    notes: Optional[str] = Query(None),  # FIXED: Add notes parameter
+    notes: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
     """
@@ -71,7 +70,7 @@ def submit_verdict(
     
     case.status = "RESOLVED"
     case.verdict = verdict
-    case.verdict_details = notes  # FIXED: Store verdict notes
+    case.verdict_details = notes
     case.resolved_at = datetime.now(timezone.utc)
     
     # Update timeline (Safe append for JSONB columns)
@@ -92,17 +91,18 @@ def submit_verdict(
 
 @router.post("/support", response_model=SupportSchema, status_code=201)
 def create_support_ticket(
-    ticket: SupportTicketCreate, 
+    ticket: SupportTicketCreate,
+    current_user: dict = Depends(get_current_user),  # FIXED: Add current_user dependency
     db: Session = Depends(get_db)
 ):
     """Creates a support packet (SupportView on Frontend)"""
-    # FIXED: Include operator_id from the request
+    # FIXED: Get operator_id from current_user instead of ticket
     new_ticket = SupportTicket(
         id=f"SR-{uuid.uuid4().hex[:6].upper()}",
         category=ticket.category,
         subject=ticket.subject,
         message=ticket.message,
-        operator_id=ticket.operator_id,  # FIXED: Added operator_id
+        operator_id=current_user["operator_id"],  # FIXED: Use current_user
         status="PENDING",
         created_at=datetime.now(timezone.utc)
     )
@@ -113,13 +113,17 @@ def create_support_ticket(
 
 @router.get("/support", response_model=List[SupportSchema])
 def list_support_tickets(
-    operator_id: Optional[str] = Query(None),  # FIXED: Add operator_id filter
+    operator_id: Optional[str] = Query(None),
+    current_user: dict = Depends(get_current_user),  # FIXED: Add current_user dependency
     db: Session = Depends(get_db)
 ):
     """Feeds the 'HistoryView' on the Global Resolution Center"""
     query = db.query(SupportTicket).order_by(SupportTicket.created_at.desc())
     
-    # FIXED: Filter by operator_id if provided
+    # If no operator_id provided, use the current user's ID
+    if not operator_id and current_user:
+        operator_id = current_user.get("operator_id")
+    
     if operator_id:
         query = query.filter(SupportTicket.operator_id == operator_id)
     
@@ -130,9 +134,14 @@ def list_support_tickets(
 @router.get("/support/user/{operator_id}", response_model=List[SupportSchema])
 def get_user_support_tickets(
     operator_id: str, 
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get support tickets for a specific user"""
+    # Verify user can only see their own tickets unless admin
+    if current_user.get("operator_id") != operator_id and current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Access denied")
+    
     return db.query(SupportTicket).filter(
         SupportTicket.operator_id == operator_id
     ).order_by(SupportTicket.created_at.desc()).all()
@@ -260,7 +269,6 @@ async def get_admin_queue(
         }
     except Exception as e:
         logging.error(f"Failed to get admin queue: {str(e)}")
-        # Return default values instead of failing
         return {
             "pending": 0,
             "in_review": 0,

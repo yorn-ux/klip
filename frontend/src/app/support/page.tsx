@@ -7,17 +7,13 @@ import {
   History, LifeBuoy, Send, ExternalLink, 
   CheckCircle2, Menu, X, Scale, 
   ThumbsUp, ThumbsDown, MinusCircle, 
-  Gem, BadgeCheck, Home, 
-   Shield
+  BadgeCheck, Home, Shield
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 // --- CONFIGURATION ---
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
-// Token expiration time (30 minutes)
-const TOKEN_EXPIRY = 30 * 60 * 1000;
-
 // --- TYPES & INTERFACES ---
 type Role = 'influencer' | 'business' | 'admin' | 'operator';
 type NavigationTab = 'disputes' | 'support' | 'history';
@@ -69,17 +65,14 @@ interface AdminQueue {
   avg_resolution_time: string;
 }
 
-// Professional Logo Component
+// ==================== STANDARD KLIP LOGO ====================
+
 const KlipLogo = () => (
-  <div className="relative flex items-center justify-center">
-    <div className="relative w-8 h-8">
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl rotate-6 shadow-lg" />
-      <div className="absolute inset-[2px] bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg rotate-6" />
-      <div className="absolute inset-0 flex items-center justify-center">
-        <Gem size={12} className="text-amber-400" strokeWidth={1.5} />
-      </div>
-      <div className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-emerald-500 rounded-full ring-2 ring-white animate-pulse" />
+  <div className="flex items-center gap-2 group">
+    <div className="w-8 h-8 bg-gradient-to-br from-slate-900 to-slate-700 rounded-xl flex items-center justify-center transition-all group-hover:shadow-lg">
+      <span className="text-white font-bold text-lg">K</span>
     </div>
+    <span className="text-xl font-semibold tracking-tight text-slate-900">KLIP</span>
   </div>
 );
 
@@ -108,7 +101,7 @@ export default function GlobalResolutionCenter() {
   const getToken = useCallback((): string | null => {
     if (typeof window === 'undefined') return null;
     
-    const localToken = localStorage.getItem('auth_token');
+    const localToken = localStorage.getItem('access_token');
     if (localToken) return localToken;
     
     const getCookie = (name: string): string | null => {
@@ -130,42 +123,30 @@ export default function GlobalResolutionCenter() {
     return token ? { 'Authorization': `Bearer ${token}` } : {};
   }, [getToken]);
 
-  // Check token expiration
-  const isTokenExpired = useCallback((loginTimestamp: number): boolean => {
-    const now = Date.now();
-    return now - loginTimestamp > TOKEN_EXPIRY;
-  }, []);
+  // Clear auth data and redirect to login
+  const handleAuthError = useCallback(() => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user_role');
+    localStorage.removeItem('user_email');
+    localStorage.removeItem('user_name');
+    localStorage.removeItem('klip_user');
+    localStorage.removeItem('auth_token');
+    document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+    document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+    router.push('/auth/login?reason=expired');
+  }, [router]);
 
-     // Clear auth data and redirect to login
-   const handleAuthError = useCallback(() => {
-     localStorage.removeItem('auth_token');
-     localStorage.removeItem('klip_user');
-     localStorage.removeItem('login_timestamp');
-     document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-     document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-     router.push('/auth/login?reason=expired');
-   }, [router]);
-
-  // Get user identity from localStorage (matching other pages)
+  // Get user identity from localStorage
   useEffect(() => {
     setMounted(true);
     
     const loadUser = () => {
       const storedUser = localStorage.getItem('klip_user');
       const token = getToken();
-      const loginTimestamp = localStorage.getItem('login_timestamp');
       
       if (!token || !storedUser) {
         handleAuthError();
         return;
-      }
-
-      if (loginTimestamp) {
-        const timestamp = parseInt(loginTimestamp);
-        if (isTokenExpired(timestamp)) {
-          handleAuthError();
-          return;
-        }
       }
 
       try {
@@ -176,7 +157,6 @@ export default function GlobalResolutionCenter() {
           role: (parsed.role as Role) || 'influencer',
           fullName: parsed.full_name || parsed.fullName || 'User',
           email: parsed.email || '',
-          login_timestamp: parsed.login_timestamp || parseInt(loginTimestamp || '0')
         };
         setUser(userData);
         setUserRole(userData.role);
@@ -187,36 +167,7 @@ export default function GlobalResolutionCenter() {
     };
 
     loadUser();
-  }, [router, getToken, handleAuthError, isTokenExpired]);
-
-  // Activity listener for token expiration
-  useEffect(() => {
-    const checkTokenExpiration = () => {
-      const loginTimestamp = localStorage.getItem('login_timestamp');
-      const token = getToken();
-      
-      if (token && loginTimestamp) {
-        const timestamp = parseInt(loginTimestamp);
-        if (isTokenExpired(timestamp)) {
-          handleAuthError();
-        }
-      }
-    };
-
-    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
-    events.forEach(event => {
-      window.addEventListener(event, checkTokenExpiration);
-    });
-
-    const interval = setInterval(checkTokenExpiration, 60000);
-
-    return () => {
-      events.forEach(event => {
-        window.removeEventListener(event, checkTokenExpiration);
-      });
-      clearInterval(interval);
-    };
-  }, [getToken, handleAuthError, isTokenExpired]);
+  }, [router, getToken, handleAuthError]);
 
   // Fetch disputes and tickets
   const fetchDisputes = useCallback(async () => {
@@ -255,9 +206,9 @@ export default function GlobalResolutionCenter() {
       const disputesData = await disputesResponse.json();
       setCases(Array.isArray(disputesData) ? disputesData : []);
 
-       const ticketsResponse = await fetch(`${API_BASE_URL}/api/v1/dispute/support?operator_id=${user.operator_id}`, {
-         headers
-       });
+      const ticketsResponse = await fetch(`${API_BASE_URL}/api/v1/dispute/support?operator_id=${user.operator_id}`, {
+        headers
+      });
       
       if (ticketsResponse.ok) {
         const ticketsData = await ticketsResponse.json();
@@ -329,23 +280,25 @@ export default function GlobalResolutionCenter() {
               {mobileMenuOpen ? <X size={20} className="text-slate-600" /> : <Menu size={20} className="text-slate-600" />}
             </button>
             
-            <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-2">
               <KlipLogo />
-              <div>
-                <h1 className="text-sm font-black tracking-tight text-slate-900">
-                  Resolution<span className="text-amber-600">.Hub</span>
-                </h1>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <Shield size={10} className="text-emerald-500" />
-                  <span className="text-[8px] font-mono text-slate-400">Arbitration Node</span>
-                </div>
+            </Link>
+            
+            <div className="ml-2">
+              <h1 className="text-sm font-black tracking-tight text-slate-900">
+                Resolution<span className="text-amber-600">.Hub</span>
+              </h1>
+              <div className="flex items-center gap-1 mt-0.5">
+                <Shield size={10} className="text-emerald-500" />
+                <span className="text-[8px] font-mono text-slate-400">Arbitration Node</span>
               </div>
-              {user.role === 'admin' && (
-                <span className="ml-2 px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-[8px] font-bold border border-purple-200">
-                  ADMIN PANEL
-                </span>
-              )}
             </div>
+            
+            {user.role === 'admin' && (
+              <span className="ml-2 px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-[8px] font-bold border border-purple-200">
+                ADMIN PANEL
+              </span>
+            )}
           </div>
 
           <nav className="hidden lg:flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
@@ -800,7 +753,6 @@ function CaseDetailView({ user, caseData, onBack, canSubmitVerdict, fetchDispute
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-8 space-y-6">
-          {/* Case Header */}
           <div className="bg-white border-2 border-slate-200 p-6 rounded-xl shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
               <div className="min-w-0">
@@ -832,7 +784,6 @@ function CaseDetailView({ user, caseData, onBack, canSubmitVerdict, fetchDispute
             </div>
           </div>
 
-          {/* Evidence */}
           <div className="bg-white border-2 border-slate-200 p-6 rounded-xl shadow-sm">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Evidence</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -855,7 +806,6 @@ function CaseDetailView({ user, caseData, onBack, canSubmitVerdict, fetchDispute
             </div>
           </div>
 
-          {/* Comment Section */}
           {user.role !== 'admin' && caseData.status !== 'RESOLVED' && (
             <div className="bg-white border-2 border-slate-200 p-6 rounded-xl shadow-sm">
               <div className="flex items-center justify-between mb-4">
@@ -881,7 +831,6 @@ function CaseDetailView({ user, caseData, onBack, canSubmitVerdict, fetchDispute
 
         {/* Sidebar */}
         <div className="lg:col-span-4 space-y-6">
-          {/* Timeline */}
           <div className="bg-white border-2 border-slate-200 p-6 rounded-xl shadow-sm">
             <h3 className="text-xs font-bold text-slate-400 mb-4 uppercase tracking-wider">Timeline</h3>
             <div className="space-y-4">
@@ -897,7 +846,6 @@ function CaseDetailView({ user, caseData, onBack, canSubmitVerdict, fetchDispute
             </div>
           </div>
 
-          {/* Admin Actions */}
           {canSubmitVerdict && caseData.status !== 'RESOLVED' ? (
             <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-xl shadow-xl border border-slate-700">
               <h3 className="text-xs font-bold text-slate-400 mb-4 text-center uppercase tracking-wider">Admin Verdict</h3>
@@ -955,7 +903,6 @@ function CaseDetailView({ user, caseData, onBack, canSubmitVerdict, fetchDispute
             </div>
           )}
 
-          {/* Role Indicator */}
           <div className="bg-slate-50 border-2 border-slate-200 p-4 rounded-xl text-center">
             <p className="text-xs font-bold text-slate-400">Your Role</p>
             <p className="text-sm font-black text-slate-900 mt-1">

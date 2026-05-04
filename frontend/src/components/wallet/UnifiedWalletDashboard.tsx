@@ -22,10 +22,16 @@ import { RevenueStatCard } from '@/components/wallet/RevenueStatCard';
 
 /* =========================
    UTILITY: AUTHENTICATED FETCH
-   Synced with LoginPage localStorage keys
+   FIXED: Use 'access_token' to match login page
 ========================= */
+const getAuthToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  // Use 'access_token' like login page does
+  return localStorage.getItem('access_token');
+};
+
 const authenticatedFetch = async (endpoint: string, options: RequestInit = {}) => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  const token = getAuthToken();
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   
   if (!token) {
@@ -43,7 +49,8 @@ const authenticatedFetch = async (endpoint: string, options: RequestInit = {}) =
     const response = await fetch(`${baseUrl}${endpoint}`, { ...options, headers });
     
     if (response.status === 401 && typeof window !== 'undefined') {
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user_role');
       localStorage.removeItem('klip_user');
       window.location.href = '/auth/login?reason=expired';
     }
@@ -135,6 +142,7 @@ export default function UnifiedWalletDashboard() {
     setMounted(true);
     const fetchUser = async () => {
         try {
+            // First check localStorage for user data
             const savedUser = localStorage.getItem('klip_user');
             if (savedUser) {
                 const parsed = JSON.parse(savedUser);
@@ -157,6 +165,7 @@ export default function UnifiedWalletDashboard() {
                 }
             }
 
+            // Then fetch fresh user data from API
             const res = await authenticatedFetch('/api/v1/auth/me');
             if (res.ok) {
                 const user = await res.json();
@@ -597,7 +606,7 @@ function BusinessBillingTab() {
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
                     No ledger entries found.
-                  </td>
+                   </td>
                 </tr>
               )}
             </tbody>

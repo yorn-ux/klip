@@ -8,8 +8,6 @@ import {
   ChevronRight,
   User,
   Settings as SettingsIcon,
-  Gem,
-  BadgeCheck,
   Lock,
   LayoutDashboard,
   Briefcase,
@@ -59,10 +57,10 @@ const PUBLIC_PAGES = [
   '/about',
   '/pricing',
   '/features',
-  '/auth/login',      // ← ADD THIS
-  '/auth/register',   // ← ADD THIS
-  '/auth/forgot-password',  // ← ADD THIS
-  '/auth/reset-password',   // ← ADD THIS
+  '/auth/login',
+  '/auth/register',
+  '/auth/forgot-password',
+  '/auth/reset-password',
 ];
 
 /* =========================
@@ -94,51 +92,21 @@ const NAV_MAP: Record<UserRole, { label: string; href: string; icon: any }[]> = 
   ]
 };
 
-// Professional Logo Component
-const KlipLogo = () => (
-  <div className="relative flex items-center gap-3 group">
-    <div className="relative w-10 h-10">
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl rotate-6 transform group-hover:rotate-12 transition-all duration-300 shadow-lg" />
-      <div className="absolute inset-[2px] bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg rotate-6 transform" />
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="w-4 h-0.5 bg-amber-400/60 rounded-full rotate-45 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-        <div className="w-4 h-0.5 bg-amber-400/60 rounded-full -rotate-45 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-      </div>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <Gem size={16} className="text-amber-400 group-hover:text-amber-300 transition-colors" strokeWidth={1.5} />
-      </div>
-      <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white animate-pulse" />
-      <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white animate-pulse delay-150" />
-    </div>
+// ==================== STANDARD KLIP LOGO (Matching other pages) ====================
 
-    <div className="flex flex-col">
-      <div className="flex items-baseline gap-1">
-        <span className="text-xl font-black tracking-tight text-slate-900 group-hover:text-slate-700 transition-colors">
-          KLIP
-        </span>
-        <BadgeCheck size={14} className="text-emerald-500" />
-      </div>
-      <div className="flex items-center gap-1">
-        <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-400 group-hover:text-slate-500 transition-colors">
-          Klip
-        </span>
-        <span className="text-[8px] font-medium text-amber-500/70 bg-amber-50 px-1.5 py-0.5 rounded-full">
-          SECURE
-        </span>
-      </div>
+const KlipLogo = () => (
+  <div className="flex items-center gap-2 group">
+    <div className="w-8 h-8 bg-gradient-to-br from-slate-900 to-slate-700 rounded-xl flex items-center justify-center transition-all group-hover:shadow-lg">
+      <span className="text-white font-bold text-lg">K</span>
     </div>
+    <span className="text-xl font-semibold tracking-tight text-slate-900">KLIP</span>
   </div>
 );
 
 // Minimal Logo for Mobile
 const KlipLogoMini = () => (
-  <div className="relative w-9 h-9">
-    <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl rotate-6 shadow-md" />
-    <div className="absolute inset-[2px] bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg rotate-6" />
-    <div className="absolute inset-0 flex items-center justify-center">
-      <Gem size={14} className="text-amber-400" />
-    </div>
-    <div className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-emerald-500 rounded-full ring-2 ring-white" />
+  <div className="w-8 h-8 bg-gradient-to-br from-slate-900 to-slate-700 rounded-xl flex items-center justify-center">
+    <span className="text-white font-bold text-base">K</span>
   </div>
 );
 
@@ -181,7 +149,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Check if current page is public - FIXED
+  // Check if current page is public
   const isPublicPage = PUBLIC_PAGES.includes(pathname || '') || 
                        pathname?.startsWith('/auth/') || 
                        pathname?.startsWith('/_next') ||
@@ -202,9 +170,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     // Clear sessionStorage
     sessionStorage.clear();
     
-     // Clear cookies
-     document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-     document.cookie = "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+    // Clear cookies
+    document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+    document.cookie = "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
     
     setCurrentUser(null);
     showToast('You have been signed out', 'success');
@@ -319,12 +287,12 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             <div className="absolute inset-0 bg-slate-900 rounded-2xl rotate-12 animate-pulse" />
             <div className="absolute inset-[3px] bg-slate-800 rounded-xl rotate-12" />
             <div className="absolute inset-0 flex items-center justify-center">
-              <Gem size={24} className="text-amber-400 animate-pulse" />
+              <span className="text-white font-bold text-3xl">K</span>
             </div>
             <div className="absolute -top-2 -right-2 w-3 h-3 bg-emerald-500 rounded-full animate-ping" />
           </div>
           <div className="text-center space-y-3">
-            <p className="text-sm font-medium text-slate-900">Klip</p>
+            <p className="text-sm font-medium text-slate-900">KLIP</p>
             <div className="flex items-center justify-center gap-1">
               <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
               <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
