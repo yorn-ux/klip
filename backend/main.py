@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
+from pathlib import Path
 
 # --- 1. DATABASE & MODELS ---
 from app.database import engine, Base, get_db, SessionLocal
@@ -124,6 +125,16 @@ def get_cors_origins() -> List[str]:
     logger.info(f"CORS origins using defaults: {default_origins}")
     return default_origins
 
+# Create upload directories if they don't exist
+UPLOADS_DIR = "uploads"
+EVIDENCE_DIR = os.path.join(UPLOADS_DIR, "evidence")
+AVATAR_DIR = os.path.join(UPLOADS_DIR, "avatars")
+KYC_DIR = os.path.join(UPLOADS_DIR, "kyc")
+
+for directory in [UPLOADS_DIR, EVIDENCE_DIR, AVATAR_DIR, KYC_DIR]:
+    Path(directory).mkdir(parents=True, exist_ok=True)
+    logger.info(f"Created directory: {directory}")
+
 # LIFESPAN: Startup and Shutdown logic
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -190,10 +201,23 @@ app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"]
 app.include_router(notifications.router, prefix="/api/v1", tags=["Notifications"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
 
-# --- 5. STATIC FILES ---
+# --- 5. STATIC FILES - Mount uploads directory for serving files ---
+# This allows uploaded evidence, avatars, and KYC documents to be accessed
 uploads_dir = os.getenv("UPLOADS_DIR", "uploads")
 if os.path.exists(uploads_dir):
     app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
+    logger.info(f"Mounted static files from: {uploads_dir}")
+else:
+    # Create directory if it doesn't exist
+    Path(uploads_dir).mkdir(parents=True, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
+    logger.info(f"Created and mounted static files from: {uploads_dir}")
+
+# Also mount specific subdirectories for clarity
+if os.path.exists(EVIDENCE_DIR):
+    app.mount("/evidence", StaticFiles(directory=EVIDENCE_DIR), name="evidence")
+if os.path.exists(AVATAR_DIR):
+    app.mount("/avatars", StaticFiles(directory=AVATAR_DIR), name="avatars")
 
 # --- 6. ROOT ENDPOINTS ---
 @app.get("/", tags=["Root"])
@@ -241,7 +265,12 @@ async def health_check():
             "status": db_status,
             "details": db_details
         },
-        "environment": os.getenv("ENVIRONMENT", "production")
+        "environment": os.getenv("ENVIRONMENT", "production"),
+        "uploads": {
+            "evidence_dir": EVIDENCE_DIR,
+            "avatars_dir": AVATAR_DIR,
+            "kyc_dir": KYC_DIR
+        }
     }
 
 @app.get("/api/v1", tags=["API Info"])

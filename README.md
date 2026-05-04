@@ -16,8 +16,8 @@ Klip is a full-stack fintech solution that enables users to manage traditional a
 - Crypto Wallet Integration — Support for USDT on:
   - Binance Smart Chain (BEP20)
   - Ethereum (ERC20)
-- Fiat Payments — Stripe integration for card payments.
-- Mobile Money — M-Pesa integration for Kenya and East Africa.
+- Fiat Payments — M-Pesa integration for Safaricom (Kenya and East Africa).
+- Card Payments — Visa/Mastercard integration (Coming Soon).
 - Fund Conversions — Convert between crypto and fiat seamlessly.
 
 ### 🏦 Vaults & Campaigns
@@ -59,10 +59,10 @@ backend/
 │   ├── routes/       # API endpoints
 │   ├── schemas/      # Pydantic request/response models
 │   ├── services/     # Business logic services
-│   │   ├── card.py   # Stripe card payments
+│   │   ├── card.py   # Card payments (Visa/Mastercard - Coming Soon)
 │   │   ├── crypto.py # Cryptocurrency operations
 │   │   ├── email.py  # Email notifications (Resend)
-│   │   └── mpesa.py  # M-Pesa mobile money
+│   │   └── mpesa.py  # M-Pesa mobile money (Safaricom)
 │   └── utils/        # Utility functions
 ├── main.py           # Application entry point
 ├── config.py         # Configuration management
@@ -96,7 +96,7 @@ frontend/
 - **Database:** SQLAlchemy (PostgreSQL/SQLite)
 - **Authentication:** JWT, OAuth, Bcrypt
 - **Crypto:** Web3.py, eth-account
-- **Payments:** Stripe, M-Pesa (Intasend)
+- **Payments:** M-Pesa (Safaricom), Card (Visa/Mastercard - Coming Soon)
 - **Email:** Resend
 - **Cache:** Redis
 

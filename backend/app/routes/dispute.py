@@ -1,10 +1,13 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+import os
+import shutil
+from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File, Form
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, select
 from datetime import datetime, timezone
 import uuid
+import json
 
 # Core Imports
 from app.models.dispute import Dispute, SupportTicket
@@ -18,6 +21,36 @@ from app.routes.auth import get_current_user
 
 # Note: Prefix is removed from individual routes to be managed at the main app level
 router = APIRouter(tags=["Dispute Protocol"])
+
+# --- CONFIGURATION ---
+UPLOAD_DIR = "uploads/evidence"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# --- HELPER FUNCTIONS ---
+def save_evidence_file(file: UploadFile, case_id: str) -> dict:
+    """Save uploaded evidence file and return file info"""
+    try:
+        # Generate unique filename
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        unique_filename = f"{case_id}_{uuid.uuid4().hex[:8]}{file_ext}"
+        file_path = os.path.join(UPLOAD_DIR, unique_filename)
+        
+        # Save file
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # Get file size
+        file_size = os.path.getsize(file_path)
+        
+        return {
+            "name": file.filename,
+            "size": f"{file_size // 1024} KB" if file_size < 1024 * 1024 else f"{file_size // (1024 * 1024)} MB",
+            "type": file.content_type or "application/octet-stream",
+            "url": f"/uploads/evidence/{unique_filename}"
+        }
+    except Exception as e:
+        logging.error(f"Failed to save evidence file: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
 
 # --- 1. DISPUTE REGISTRY ---
 
@@ -48,7 +81,68 @@ def get_dispute_details(case_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Dispute case not found")
     return case
 
-# --- 2. VERDICT PROTOCOL ---
+# --- 2. EVIDENCE UPLOAD ENDPOINT ---
+
+@router.post("/disputes/{case_id}/evidence")
+async def upload_evidence(
+    case_id: str,
+    evidence: List[UploadFile] = File(...),
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Upload evidence files for a dispute case.
+    Only involved parties can upload evidence.
+    """
+    # Verify case exists
+    case = db.query(Dispute).filter(Dispute.id == case_id).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="Dispute case not found")
+    
+    # Verify user is involved in the case
+    user_id = current_user.get("operator_id")
+    user_role = current_user.get("role", "").upper()
+    
+    if user_role != "ADMIN" and case.initiator_id != user_id and case.counterparty_id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to upload evidence for this case")
+    
+    # Check if case is already resolved
+    if case.status == "RESOLVED":
+        raise HTTPException(status_code=400, detail="Cannot upload evidence to resolved case")
+    
+    # Save all evidence files
+    saved_evidence = []
+    for file in evidence:
+        if file.size > 0:
+            file_info = save_evidence_file(file, case_id)
+            saved_evidence.append(file_info)
+    
+    if not saved_evidence:
+        raise HTTPException(status_code=400, detail="No valid files uploaded")
+    
+    # Update case evidence
+    current_evidence = case.evidence or []
+    current_evidence.extend(saved_evidence)
+    case.evidence = current_evidence
+    
+    # Add to timeline
+    new_event = {
+        "event": f"Evidence uploaded by {current_user.get('full_name', 'User')}", 
+        "date": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
+        "files": len(saved_evidence)
+    }
+    case.timeline = (case.timeline or []) + [new_event]
+    
+    db.commit()
+    db.refresh(case)
+    
+    return {
+        "status": "SUCCESS", 
+        "message": f"{len(saved_evidence)} file(s) uploaded successfully",
+        "evidence": saved_evidence
+    }
+
+# --- 3. VERDICT PROTOCOL ---
 
 @router.patch("/disputes/{case_id}/verdict")
 def submit_verdict(
@@ -87,22 +181,21 @@ def submit_verdict(
     db.refresh(case)
     return {"status": "SUCCESS", "message": f"Verdict '{verdict}' broadcasted to ledger"}
 
-# --- 3. SUPPORT & TICKETING ---
+# --- 4. SUPPORT & TICKETING ---
 
 @router.post("/support", response_model=SupportSchema, status_code=201)
 def create_support_ticket(
     ticket: SupportTicketCreate,
-    current_user: dict = Depends(get_current_user),  # FIXED: Add current_user dependency
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Creates a support packet (SupportView on Frontend)"""
-    # FIXED: Get operator_id from current_user instead of ticket
     new_ticket = SupportTicket(
         id=f"SR-{uuid.uuid4().hex[:6].upper()}",
         category=ticket.category,
         subject=ticket.subject,
         message=ticket.message,
-        operator_id=current_user["operator_id"],  # FIXED: Use current_user
+        operator_id=current_user["operator_id"],
         status="PENDING",
         created_at=datetime.now(timezone.utc)
     )
@@ -114,13 +207,12 @@ def create_support_ticket(
 @router.get("/support", response_model=List[SupportSchema])
 def list_support_tickets(
     operator_id: Optional[str] = Query(None),
-    current_user: dict = Depends(get_current_user),  # FIXED: Add current_user dependency
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Feeds the 'HistoryView' on the Global Resolution Center"""
     query = db.query(SupportTicket).order_by(SupportTicket.created_at.desc())
     
-    # If no operator_id provided, use the current user's ID
     if not operator_id and current_user:
         operator_id = current_user.get("operator_id")
     
@@ -129,7 +221,7 @@ def list_support_tickets(
     
     return query.all()
 
-# --- 4. USER-SPECIFIC SUPPORT TICKETS (kept for backward compatibility) ---
+# --- 5. USER-SPECIFIC SUPPORT TICKETS ---
 
 @router.get("/support/user/{operator_id}", response_model=List[SupportSchema])
 def get_user_support_tickets(
@@ -138,7 +230,6 @@ def get_user_support_tickets(
     db: Session = Depends(get_db)
 ):
     """Get support tickets for a specific user"""
-    # Verify user can only see their own tickets unless admin
     if current_user.get("operator_id") != operator_id and current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Access denied")
     
@@ -146,7 +237,7 @@ def get_user_support_tickets(
         SupportTicket.operator_id == operator_id
     ).order_by(SupportTicket.created_at.desc()).all()
 
-# --- 5. ADMIN ASSIGNMENT ENDPOINT ---
+# --- 6. ADMIN ASSIGNMENT ENDPOINT ---
 
 @router.post("/admin/assign/{case_id}")
 def assign_dispute_to_admin(
@@ -156,7 +247,6 @@ def assign_dispute_to_admin(
     db: Session = Depends(get_db)
 ):
     """Assign a dispute to an admin (admin only)"""
-    # Verify admin access
     role = current_user.get("role", "USER").upper()
     if role not in ["ADMIN", "OPERATOR"]:
         raise HTTPException(status_code=403, detail="Admin access required")
@@ -172,7 +262,6 @@ def assign_dispute_to_admin(
     case.assigned_admin = admin_id
     case.status = "UNDER_REVIEW"
     
-    # Add to timeline
     new_event = {
         "event": f"Case assigned to admin", 
         "date": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
@@ -184,7 +273,7 @@ def assign_dispute_to_admin(
     
     return {"status": "SUCCESS", "message": "Case assigned successfully"}
 
-# --- 6. SYSTEM MOCKS (REMOVE IN PRODUCTION) ---
+# --- 7. SYSTEM MOCKS (REMOVE IN PRODUCTION) ---
 
 @router.get("/admin/notifications/{operator_id}")
 def get_mock_notifications(operator_id: str):
@@ -198,7 +287,7 @@ def get_mock_notifications(operator_id: str):
         }
     ]
 
-# --- 7. HEALTH CHECK ---
+# --- 8. HEALTH CHECK ---
 
 @router.get("/health")
 def dispute_health_check():
@@ -209,7 +298,7 @@ def dispute_health_check():
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
-# --- 8. ADMIN QUEUE STATISTICS ---
+# --- 9. ADMIN QUEUE STATISTICS ---
 
 @router.get("/admin/queue")
 async def get_admin_queue(
@@ -217,23 +306,19 @@ async def get_admin_queue(
     db: Session = Depends(get_db)
 ):
     """Get admin queue statistics (pending cases, in review, resolved today)"""
-    # Verify admin access
     role = current_user.get("role", "USER").upper()
     if role not in ["ADMIN", "OPERATOR"]:
         raise HTTPException(status_code=403, detail="Admin access required")
     
     try:
-        # Count pending disputes (OPEN)
         pending = db.execute(
             select(func.count()).select_from(Dispute).where(Dispute.status == "OPEN")
         ).scalar() or 0
         
-        # Count disputes under review
         in_review = db.execute(
             select(func.count()).select_from(Dispute).where(Dispute.status == "UNDER_REVIEW")
         ).scalar() or 0
         
-        # Count disputes resolved today
         today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         resolved_today = db.execute(
             select(func.count())
@@ -244,7 +329,6 @@ async def get_admin_queue(
             )
         ).scalar() or 0
         
-        # Calculate average resolution time (in hours)
         resolved_disputes = db.execute(
             select(Dispute)
             .where(Dispute.status == "RESOLVED")
@@ -256,7 +340,7 @@ async def get_admin_queue(
         for dispute in resolved_disputes:
             if dispute.resolved_at and dispute.created_at:
                 time_diff = dispute.resolved_at - dispute.created_at
-                total_time += time_diff.total_seconds() / 3600  # Convert to hours
+                total_time += time_diff.total_seconds() / 3600
                 count += 1
         
         avg_resolution_time = f"{round(total_time / count, 1)}h" if count > 0 else "0h"
@@ -275,3 +359,40 @@ async def get_admin_queue(
             "resolved_today": 0,
             "avg_resolution_time": "0h"
         }
+
+# --- 10. ADD COMMENT TO DISPUTE ---
+
+@router.post("/disputes/{case_id}/comments")
+def add_comment(
+    case_id: str,
+    comment: dict,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Add a comment to a dispute case"""
+    case = db.query(Dispute).filter(Dispute.id == case_id).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="Dispute case not found")
+    
+    user_id = current_user.get("operator_id")
+    user_role = current_user.get("role", "").upper()
+    
+    # Verify user is involved
+    if user_role != "ADMIN" and case.initiator_id != user_id and case.counterparty_id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to comment on this case")
+    
+    comment_text = comment.get("text")
+    if not comment_text:
+        raise HTTPException(status_code=400, detail="Comment text is required")
+    
+    new_event = {
+        "event": f"Comment from {current_user.get('full_name', 'User')}", 
+        "date": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
+        "comment": comment_text,
+        "user_role": user_role
+    }
+    case.timeline = (case.timeline or []) + [new_event]
+    
+    db.commit()
+    
+    return {"status": "SUCCESS", "message": "Comment added successfully"}

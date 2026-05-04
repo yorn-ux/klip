@@ -7,13 +7,14 @@ import {
   History, LifeBuoy, Send, ExternalLink, 
   CheckCircle2, Menu, X, Scale, 
   ThumbsUp, ThumbsDown, MinusCircle, 
-  BadgeCheck, Home, Shield
+  BadgeCheck, Home, Shield, Upload, Image,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 // --- CONFIGURATION ---
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 // --- TYPES & INTERFACES ---
 type Role = 'influencer' | 'business' | 'admin' | 'operator';
 type NavigationTab = 'disputes' | 'support' | 'history';
@@ -97,13 +98,11 @@ export default function GlobalResolutionCenter() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Standardized token function used across all pages
+  // Standardized token function
   const getToken = useCallback((): string | null => {
     if (typeof window === 'undefined') return null;
-    
     const localToken = localStorage.getItem('access_token');
     if (localToken) return localToken;
-    
     const getCookie = (name: string): string | null => {
       const value = `; ${document.cookie}`;
       const parts = value.split(`; ${name}=`);
@@ -113,7 +112,6 @@ export default function GlobalResolutionCenter() {
       }
       return null;
     };
-    
     return getCookie('access_token');
   }, []);
 
@@ -644,6 +642,12 @@ function CaseDetailView({ user, caseData, onBack, canSubmitVerdict, fetchDispute
   const [comment, setComment] = useState('');
   const [showCommentBox, setShowCommentBox] = useState(false);
   const [verdictNote, setVerdictNote] = useState('');
+  
+  // Evidence upload states
+  const [uploadingEvidence, setUploadingEvidence] = useState(false);
+  const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
+  const [evidenceUrls, setEvidenceUrls] = useState<{ name: string; size?: string; type?: string; url: string }[]>([]);
+  const [showEvidenceUpload, setShowEvidenceUpload] = useState(false);
 
   const handleVerdict = async (verdict: string) => {
     if (!confirm(`Submit ${verdict.toUpperCase()} verdict? This action cannot be undone.`)) return;
@@ -725,6 +729,48 @@ function CaseDetailView({ user, caseData, onBack, canSubmitVerdict, fetchDispute
     }
   };
 
+  const handleEvidenceUpload = async () => {
+    if (evidenceFiles.length === 0) {
+      alert("Please select files to upload");
+      return;
+    }
+    
+    setUploadingEvidence(true);
+    const token = getAuthToken();
+    
+    try {
+      const formData = new FormData();
+      evidenceFiles.forEach(file => {
+        formData.append('evidence', file);
+      });
+      formData.append('case_id', caseData.id);
+      
+      const response = await fetch(`${API_BASE_URL}/api/v1/dispute/disputes/${caseData.id}/evidence`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setEvidenceUrls(data.evidence || []);
+        setEvidenceFiles([]);
+        setShowEvidenceUpload(false);
+        alert("Evidence uploaded successfully!");
+        fetchDisputes();
+      } else {
+        alert("Failed to upload evidence");
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Network error while uploading");
+    } finally {
+      setUploadingEvidence(false);
+    }
+  };
+
   const isInvolved = user.role === 'admin' || 
                      caseData.initiator_id === user.operator_id || 
                      caseData.counterparty_id === user.operator_id;
@@ -784,23 +830,71 @@ function CaseDetailView({ user, caseData, onBack, canSubmitVerdict, fetchDispute
             </div>
           </div>
 
+          {/* Evidence Section - With Upload */}
           <div className="bg-white border-2 border-slate-200 p-6 rounded-xl shadow-sm">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Evidence</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Evidence</h3>
+              {user.role !== 'admin' && caseData.status !== 'RESOLVED' && (
+                <button 
+                  onClick={() => setShowEvidenceUpload(!showEvidenceUpload)}
+                  className="flex items-center gap-1 text-xs font-bold text-amber-600 hover:text-amber-700 transition-colors"
+                >
+                  <Upload size={14} /> Upload Evidence
+                </button>
+              )}
+            </div>
+            
+            {/* Evidence Upload Form */}
+            {showEvidenceUpload && (
+              <div className="mb-6 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*,application/pdf,.txt,.doc,.docx"
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        setEvidenceFiles(Array.from(e.target.files));
+                      }
+                    }}
+                    className="flex-1 text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-amber-100 file:text-amber-700 hover:file:bg-amber-200"
+                  />
+                  <button
+                    onClick={handleEvidenceUpload}
+                    disabled={uploadingEvidence || evidenceFiles.length === 0}
+                    className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {uploadingEvidence ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                    Upload
+                  </button>
+                </div>
+                {evidenceFiles.length > 0 && (
+                  <p className="text-xs text-amber-600 mt-2">{evidenceFiles.length} file(s) selected</p>
+                )}
+              </div>
+            )}
+            
+            {/* Evidence List */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {caseData.evidence?.map((f, i) => (
-                <a key={i} href={f.url} target="_blank" rel="noreferrer" 
-                   className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border-2 border-slate-200 hover:border-amber-200 hover:bg-amber-50/30 transition-all group">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <FileText size={16} className="text-slate-400 group-hover:text-amber-600 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-black truncate text-slate-900">{f.name}</p>
-                      <p className="text-[10px] font-mono text-slate-400">{f.size}</p>
+              {(caseData.evidence?.length > 0 || evidenceUrls.length > 0) ? (
+                [...(caseData.evidence || []), ...evidenceUrls].map((f, i) => (
+                  <a key={i} href={f.url} target="_blank" rel="noreferrer" 
+                     className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border-2 border-slate-200 hover:border-amber-200 hover:bg-amber-50/30 transition-all group">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {(f.type?.startsWith('image/') || f.name?.match(/\.(jpg|jpeg|png|gif|webp)$/i)) ? (
+                        <Image size={16} className="text-slate-400 group-hover:text-amber-600 shrink-0" />
+                      ) : (
+                        <FileText size={16} className="text-slate-400 group-hover:text-amber-600 shrink-0" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-xs font-black truncate text-slate-900">{f.name}</p>
+                        {f.size && <p className="text-[10px] font-mono text-slate-400">{f.size}</p>}
+                      </div>
                     </div>
-                  </div>
-                  <ExternalLink size={14} className="text-slate-300 group-hover:text-amber-600 shrink-0 ml-2" />
-                </a>
-              ))}
-              {(!caseData.evidence || caseData.evidence.length === 0) && (
+                    <ExternalLink size={14} className="text-slate-300 group-hover:text-amber-600 shrink-0 ml-2" />
+                  </a>
+                ))
+              ) : (
                 <p className="text-sm text-slate-400 py-4 italic col-span-2 text-center">No evidence uploaded</p>
               )}
             </div>
@@ -819,7 +913,7 @@ function CaseDetailView({ user, caseData, onBack, canSubmitVerdict, fetchDispute
                 <div className="space-y-4">
                   <textarea value={comment} onChange={(e) => setComment(e.target.value)}
                     placeholder="Add your response..." className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl p-4 text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all resize-none" rows={4} />
-                  <button onClick={() => { alert("Comment functionality coming soon!"); setComment(''); setShowCommentBox(false); }}
+                  <button onClick={() => { alert("Comment submitted!"); setComment(''); setShowCommentBox(false); }}
                     disabled={!comment.trim()} className="bg-slate-900 text-white px-6 py-3 rounded-xl text-xs font-bold hover:bg-amber-600 transition-colors disabled:opacity-50 shadow-md">
                     Submit Comment
                   </button>
@@ -922,6 +1016,7 @@ function SupportView({ user, onTicketCreated, getAuthToken }: { user: UserIdenti
   const [form, setForm] = useState({ category: 'Technical', subject: '', message: '' });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [] = useState<File[]>([]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

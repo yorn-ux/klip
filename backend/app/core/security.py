@@ -94,7 +94,7 @@ def generate_operator_id() -> str:
     random_part = ''.join(secrets.choice(alphabet) for _ in range(6))
     return f"OP-{date_part}-{random_part}"
 
-# --- SECURITY ALERT FUNCTION ---
+# --- SECURITY ALERT FUNCTION - FIXED ---
 async def send_security_alert(
     to_email: str, 
     ip_address: str, 
@@ -108,35 +108,44 @@ async def send_security_alert(
         # 1. Create the special security token
         token = create_security_token(to_email)
         
-        # 2. Get the Base URL from .env (fallback to APP_URL for production)
-        environment = os.getenv("ENVIRONMENT", "development").lower()
-        base_url = os.getenv("BACKEND_URL")
+        # 2. Get the Base URL from environment variables - FIXED
+        environment = os.getenv("ENVIRONMENT", "production").lower()
         
-        # If BACKEND_URL is not set, try APP_URL as fallback for production
-        if not base_url:
-            if environment == "production":
-                # Use the Render/production URL from environment
-                base_url = os.getenv("APP_URL", "")
-                if not base_url:
-                    # Last resort fallback - this should be set in Render dashboard
-                    base_url = "https://klip-wtx9.onrender.com"
-            else:
+        # Priority order for base URL:
+        # 1. FRONTEND_URL (for lock page) or BACKEND_URL (for API)
+        # 2. APP_URL (Render default)
+        # 3. Production fallback URL
+        base_url = os.getenv("FRONTEND_URL") or os.getenv("BACKEND_URL") or os.getenv("APP_URL")
+        
+        # For production, ensure we have a valid URL
+        if environment == "production":
+            if not base_url:
+                # Use your actual production Render URL as fallback
+                base_url = "https://klip-wtx9.onrender.com"
+        else:
+            # Development fallback
+            if not base_url:
                 base_url = "http://localhost:8000"
         
         base_url = base_url.rstrip("/")
         
-        # 3. Construct the link using the dynamic base
+        # 3. Construct the lock link using the correct base URL
+        # Note: This should point to the frontend page that handles account locking
+        # If using frontend for lock page, use FRONTEND_URL instead
         lock_link = f"{base_url}/api/v1/auth/lock-account/{token}"
         
-        # 4. Print to console for development visibility
+        # 4. Print to console for visibility
         print("\n" + "!"*60)
         print(f"🚨 SECURITY ALERT: New Login for {to_email}")
         print(f"🌐 Location: {ip_address}")
         print(f"📱 Device: {user_agent}")
         print(f"🔒 LOCK LINK: {lock_link}")
+        print(f"🌍 Environment: {environment}")
+        print(f"📡 Base URL used: {base_url}")
         print("!"*60 + "\n")
         
-        # 5. TODO: Add email sending logic here using your email service
+        # 5. Send email with the lock link
+        # Uncomment and implement when email service is ready
         # from app.services.email import send_security_alert_email
         # await send_security_alert_email(to_email, ip_address, user_agent, lock_link)
         
@@ -160,7 +169,6 @@ def get_token_expiration_date(expires_minutes: int = ACCESS_TOKEN_EXPIRE_MINUTES
 
 # --- REMOVED FUNCTIONS ---
 # generate_recovery_phrase() - COMPLETELY REMOVED - No mnemonic/recovery system
-# Any other recovery-related functions are removed
 
 # Export all public functions
 __all__ = [
