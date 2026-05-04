@@ -12,11 +12,9 @@ import json
 # Core Imports
 from app.models.dispute import Dispute, SupportTicket
 from app.schemas.dispute import (
-    Dispute as DisputeSchema, 
-    SupportTicketCreate, 
-    SupportTicket as SupportSchema,
-    SupportTicketUpdate,
-    DisputeCreate
+    DisputeResponse as DisputeSchema,
+    SupportTicketCreate,
+    SupportTicketResponse as SupportSchema
 )
 from app.database import get_db
 from app.routes.auth import get_current_user 
