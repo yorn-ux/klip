@@ -1,7 +1,7 @@
 # app/routes/admin.py
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import or_, select, update, delete, func, and_
+from sqlalchemy import or_, select, update, delete, func, text, and_
 from typing import Dict, Any, List, Optional
 import logging
 from datetime import datetime, timedelta
