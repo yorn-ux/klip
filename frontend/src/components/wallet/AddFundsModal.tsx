@@ -5,7 +5,7 @@ import {
   X, CreditCard, Smartphone, Loader2, 
   CheckCircle, AlertCircle, ArrowLeft, Lock,
   Shield, Zap, Clock, Gem, BadgeCheck,
-  Wallet, Sparkles
+  Wallet, Sparkles, Phone
 } from 'lucide-react';
 
 interface AddFundsModalProps {
@@ -24,13 +24,15 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
   const [invoiceId, setInvoiceId] = useState('');
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   
+  // M-Pesa form fields
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'mpesa' | null>(null);
+  
   // Fee logic
   const [isFirstDeposit] = useState(true);
   const STANDARD_FEE = 25;
   const currentFee = isFirstDeposit ? 0 : STANDARD_FEE;
   const totalCharge = Number(amount) > 0 ? Number(amount) + currentFee : 0;
-
-  const [paypalDetails, setpaypalDetails] = useState({ email: '' });
 
   // Professional Logo Component
   const KlipLogo = () => (
@@ -45,6 +47,27 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
       </div>
     </div>
   );
+
+  // Format phone number for M-Pesa (254XXXXXXXXX)
+  const formatPhoneNumber = (phone: string): string => {
+    let cleaned = phone.replace(/\D/g, '');
+    if (cleaned.startsWith('0')) {
+      cleaned = '254' + cleaned.substring(1);
+    }
+    if (cleaned.startsWith('254') && cleaned.length === 12) {
+      return cleaned;
+    }
+    if (cleaned.length === 10 && cleaned.startsWith('7')) {
+      return '254' + cleaned;
+    }
+    return cleaned;
+  };
+
+  // Validate M-Pesa phone number
+  const validatePhoneNumber = (phone: string): boolean => {
+    const formatted = formatPhoneNumber(phone);
+    return formatted.length === 12 && formatted.startsWith('254');
+  };
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -62,17 +85,21 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
       setError('');
       setLoading(false);
       setInvoiceId('');
+      setPhoneNumber('');
+      setAmount('');
+      setPaymentMethod(null);
       if (pollingInterval) {
         clearInterval(pollingInterval);
         setPollingInterval(null);
       }
     }
-  }, [isOpen]);
+  }, [isOpen, pollingInterval]);
 
   const handleBack = () => {
     if (step === 'form') {
       setStep('select');
       setError('');
+      setPaymentMethod(null);
     } else {
       onClose();
     }
@@ -86,16 +113,17 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
     setStep('select');
     setError('');
     setAmount('');
-    setpaypalDetails({ email: '' });
+    setPhoneNumber('');
     setInvoiceId('');
+    setPaymentMethod(null);
     onClose();
   };
 
-   // Auth helper
-   const getAuthToken = () => {
-     return localStorage.getItem('auth_token') || 
-            document.cookie.split('; ').find(row => row.startsWith('access_token='))?.split('=')[1];
-   };
+  // Auth helper
+  const getAuthToken = () => {
+    return localStorage.getItem('access_token') || 
+           document.cookie.split('; ').find(row => row.startsWith('access_token='))?.split('=')[1];
+  };
 
   // Check transaction status with payment gateway
   const checkTransactionStatus = async (invoiceId: string) => {
@@ -103,7 +131,6 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
       const token = getAuthToken();
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       
-      // Try deposit status endpoint first, then fallback to transaction lookup
       const res = await fetch(`${API_URL}/api/v1/wallet/deposit/status/${invoiceId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -173,6 +200,13 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
       return;
     }
 
+    if (paymentMethod === 'mpesa') {
+      if (!validatePhoneNumber(phoneNumber)) {
+        setError('Please enter a valid M-Pesa phone number (e.g., 0712345678)');
+        return;
+      }
+    }
+
     setLoading(true);
     setError('');
 
@@ -185,14 +219,20 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
       }
 
       const reference = `DEP_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+      
+      let endpoint = '';
+      let bodyData = {};
 
-      const endpoint = `${API_URL}/api/v1/wallet/deposit/paypal`;
-
-      const bodyData = { 
-        amount: cleanAmount,
-        currency: 'KES',
-        reference: reference
-      };
+      if (paymentMethod === 'mpesa') {
+        endpoint = `${API_URL}/api/v1/wallet/deposit/mpesa`;
+        bodyData = { 
+          amount: cleanAmount,
+          phone_number: formatPhoneNumber(phoneNumber),
+          reference: reference
+        };
+      } else {
+        throw new Error('Invalid payment method');
+      }
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -209,23 +249,24 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
         throw new Error(result.detail || result.message || "Payment initiation failed");
       }
 
+      // Store transaction ID
       if (result.invoice_id) {
         setInvoiceId(result.invoice_id);
       } else if (result.tracking_id) {
         setInvoiceId(result.tracking_id);
-      } else if (result.order_tracking_id) {
-        setInvoiceId(result.order_tracking_id);
       } else if (result.checkout_request_id) {
         setInvoiceId(result.checkout_request_id);
-      } else if (result.tx_id) {
-        setInvoiceId(result.tx_id);
+      } else if (result.transaction_id) {
+        setInvoiceId(result.transaction_id);
       }
 
       setStep('processing');
 
-      if (result.invoice_id || result.tracking_id || result.order_tracking_id || result.checkout_request_id || result.tx_id) {
-        startPolling(result.invoice_id || result.tracking_id || result.order_tracking_id || result.checkout_request_id || result.tx_id);
+      // Start polling for transaction status
+      if (invoiceId || result.invoice_id || result.checkout_request_id || result.transaction_id) {
+        startPolling(invoiceId || result.invoice_id || result.checkout_request_id || result.transaction_id);
       } else {
+        // If no ID, wait a bit then show success
         setTimeout(() => {
           setStep('success');
           setTimeout(() => {
@@ -249,6 +290,11 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
     setInvoiceId('');
   };
 
+  const handleMethodSelect = (method: 'mpesa') => {
+    setPaymentMethod(method);
+    setStep('form');
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -256,7 +302,7 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
       <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* Top Gradient Bar */}
-        <div className="h-2 bg-gradient-to-r from-amber-500 to-amber-400" />
+        <div className="h-2 bg-gradient-to-r from-emerald-500 to-emerald-400" />
 
         {/* Header */}
         <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-white">
@@ -275,7 +321,7 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
               <div>
                 <h2 className="text-base font-black text-slate-900">
                   {step === 'select' && 'Add Funds'}
-                  {step === 'form' && 'PayPal Deposit'}
+                  {step === 'form' && paymentMethod === 'mpesa' && 'M-Pesa Deposit'}
                   {step === 'processing' && 'Processing Payment'}
                   {step === 'success' && 'Payment Successful'}
                   {step === 'failed' && 'Payment Failed'}
@@ -300,22 +346,22 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
         <div className="p-6">
           {step === 'select' && (
             <div className="space-y-3">
-              {/* PayPal - Active */}
+              {/* M-Pesa - Active */}
               <button 
-                onClick={() => setStep('form')} 
+                onClick={() => handleMethodSelect('mpesa')} 
                 className="w-full p-5 border-2 border-emerald-200 rounded-xl hover:border-emerald-400 hover:bg-emerald-50/30 flex items-center gap-4 transition-all group"
               >
                 <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform group-hover:bg-emerald-200">
                   <Smartphone className="text-emerald-600" size={22} />
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="text-sm font-black text-slate-900">PayPal</p>
-                  <p className="text-xs text-slate-400 mt-0.5">Instant STK Push via secure gateway</p>
+                  <p className="text-sm font-black text-slate-900">M-Pesa</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Instant STK Push via Lipa Na M-Pesa</p>
                 </div>
                 <span className="text-[10px] px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full font-bold border border-emerald-200">Active</span>
               </button>
 
-              {/* Card - Temporarily Unavailable */}
+              {/* Card - Coming Soon */}
               <div className="w-full p-5 border-2 border-slate-200 rounded-xl bg-slate-50 flex items-center gap-4 opacity-60 cursor-not-allowed">
                 <div className="w-12 h-12 bg-slate-200 rounded-xl flex items-center justify-center">
                   <CreditCard className="text-slate-400" size={22} />
@@ -328,25 +374,25 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
               </div>
 
               {/* Info Notice */}
-              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
                 <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-amber-100 rounded-lg flex items-center justify-center shrink-0">
-                    <Zap size={14} className="text-amber-600" />
+                  <div className="w-6 h-6 bg-emerald-100 rounded-lg flex items-center justify-center shrink-0">
+                    <Zap size={14} className="text-emerald-600" />
                   </div>
-                  <p className="text-xs text-amber-800 leading-relaxed">
+                  <p className="text-xs text-emerald-800 leading-relaxed">
                     You'll receive an STK push on your phone to complete the payment. 
-                    <span className="block text-amber-600/70 text-[10px] mt-1">Transactions are processed instantly via our secure gateway.</span>
+                    <span className="block text-emerald-600/70 text-[10px] mt-1">Transactions are processed instantly via M-Pesa.</span>
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          {step === 'form' && (
+          {step === 'form' && paymentMethod === 'mpesa' && (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 ml-1 flex items-center gap-1.5">
-                  <Wallet size={12} className="text-amber-500" />
+                  <Wallet size={12} className="text-emerald-500" />
                   Amount (KES)
                 </label>
                 <div className="relative">
@@ -360,25 +406,25 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
                     required
                     min="10"
                     step="10"
-                    className="w-full pl-16 pr-4 py-4 bg-white border-2 border-slate-200 rounded-xl text-slate-900 outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all font-bold text-lg"
+                    className="w-full pl-16 pr-4 py-4 bg-white border-2 border-slate-200 rounded-xl text-slate-900 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all font-bold text-lg"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 ml-1 flex items-center gap-1.5">
-                  <Smartphone size={12} className="text-amber-500" />
-                  PayPal Email Address
+                  <Phone size={12} className="text-emerald-500" />
+                  M-Pesa Phone Number
                 </label>
                 <input
-                  type="email" 
-                  placeholder="your-paypal@email.com" 
-                  value={paypalDetails.email}
-                  onChange={(e) => setpaypalDetails({ email: e.target.value })}
-                  className="w-full px-4 py-4 bg-white border-2 border-slate-200 rounded-xl text-slate-900 outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all"
+                  type="tel" 
+                  placeholder="0712345678" 
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="w-full px-4 py-4 bg-white border-2 border-slate-200 rounded-xl text-slate-900 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all"
                   required
                 />
-                <p className="text-[10px] text-slate-400 mt-1 font-mono">Enter your PayPal email address</p>
+                <p className="text-[10px] text-slate-400 mt-1 font-mono">Enter the M-Pesa registered phone number</p>
               </div>
 
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
@@ -390,7 +436,7 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
                 </div>
                 <div className="flex justify-between text-sm font-black pt-3 mt-2 border-t border-slate-200">
                   <span className="text-slate-700">Total Charge</span>
-                  <span className="text-amber-600">KES {totalCharge.toLocaleString()}</span>
+                  <span className="text-emerald-600">KES {totalCharge.toLocaleString()}</span>
                 </div>
               </div>
 
@@ -404,14 +450,14 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
               <button
                 type="submit" 
                 disabled={loading}
-                className="w-full py-4 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
                 {loading ? (
                   <Loader2 size={18} className="animate-spin" />
                 ) : (
                   <>
                     <Smartphone size={18} />
-                    Pay with PayPal
+                    Pay with M-Pesa
                   </>
                 )}
               </button>
@@ -425,15 +471,15 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
           {step === 'processing' && (
             <div className="py-10 text-center">
               <div className="relative w-20 h-20 mx-auto mb-5">
-                <div className="absolute inset-0 bg-amber-100 rounded-full animate-ping opacity-50" />
-                <div className="relative w-20 h-20 bg-gradient-to-br from-amber-50 to-amber-100 rounded-full border-2 border-amber-200 flex items-center justify-center">
-                  <Loader2 size={40} className="animate-spin text-amber-600" />
+                <div className="absolute inset-0 bg-emerald-100 rounded-full animate-ping opacity-50" />
+                <div className="relative w-20 h-20 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-full border-2 border-emerald-200 flex items-center justify-center">
+                  <Loader2 size={40} className="animate-spin text-emerald-600" />
                 </div>
-                <Smartphone size={20} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-amber-600" />
+                <Smartphone size={20} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-emerald-600" />
               </div>
-              <p className="text-base font-black text-slate-900 mb-2">Awaiting PayPal Confirmation</p>
+              <p className="text-base font-black text-slate-900 mb-2">Awaiting M-Pesa Confirmation</p>
               <p className="text-xs text-slate-500 px-6 mb-4 leading-relaxed">
-                Please check your email and complete the PayPal payment to fund your wallet.
+                Please check your phone and enter your M-Pesa PIN to complete the payment.
               </p>
               {invoiceId && (
                 <p className="text-[10px] font-mono text-slate-400 bg-slate-50 py-2 px-3 rounded-full inline-block">
@@ -441,11 +487,11 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
                 </p>
               )}
               <div className="mt-6 flex items-center justify-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
-              <p className="text-[9px] text-slate-300 mt-4">Processing via secure gateway</p>
+              <p className="text-[9px] text-slate-300 mt-4">Processing via M-Pesa Secure Gateway</p>
             </div>
           )}
 
@@ -466,7 +512,7 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
               )}
               <div className="mt-6 flex items-center justify-center gap-1 text-[9px] text-slate-300">
                 <BadgeCheck size={10} className="text-emerald-500" />
-                <span>Verified by secure gateway</span>
+                <span>Verified by M-Pesa</span>
               </div>
             </div>
           )}
@@ -481,7 +527,7 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
               <div className="flex gap-3 justify-center">
                 <button 
                   onClick={handleRetry} 
-                  className="text-xs px-5 py-3 bg-amber-600 text-white rounded-xl font-bold hover:bg-amber-700 transition-colors shadow-md"
+                  className="text-xs px-5 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-md"
                 >
                   Try Again
                 </button>
@@ -507,7 +553,7 @@ export default function AddFundsModal({ isOpen, onClose, onSuccess }: AddFundsMo
             <span>Instant settlement</span>
           </div>
           <div className="flex items-center gap-2 text-[9px] text-slate-400">
-            <Sparkles size={10} className="text-amber-500" />
+            <Sparkles size={10} className="text-emerald-500" />
             <span>No hidden fees</span>
           </div>
         </div>

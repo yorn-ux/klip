@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   X, Smartphone, Bitcoin, Loader2, 
   CheckCircle, Shield, ArrowLeft, AlertCircle,
-  CreditCard, Clock, Lock,  Gem,
-  BadgeCheck, Wallet, Sparkles
+  CreditCard, Clock, Lock, Gem,
+  BadgeCheck, Wallet, Sparkles, Phone
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/useNotificationStore';
 
@@ -21,9 +21,10 @@ type WithdrawalStep = 'form' | 'processing' | 'success' | 'failed';
 
 export default function WithdrawalModal({ isOpen, onClose, balances, walletAddress }: WithdrawalModalProps) {
   const { showToast } = useNotificationStore();
-  const [method, setMethod] = useState<'paypal' | 'crypto'>('paypal');
+  const [method, setMethod] = useState<'mpesa' | 'crypto'>('mpesa');
   const [amount, setAmount] = useState('');
   const [destination, setDestination] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<WithdrawalStep>('form');
   const [error, setError] = useState('');
@@ -48,12 +49,32 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
     </div>
   );
 
-   // Auth helper
-   const getAuthToken = () => {
-     return localStorage.getItem('auth_token') || 
-            document.cookie.split('; ').find(row => row.startsWith('access_token='))?.split('=')[1];
-   };
+  // Format phone number for M-Pesa (254XXXXXXXXX)
+  const formatPhoneNumber = (phone: string): string => {
+    let cleaned = phone.replace(/\D/g, '');
+    if (cleaned.startsWith('0')) {
+      cleaned = '254' + cleaned.substring(1);
+    }
+    if (cleaned.startsWith('254') && cleaned.length === 12) {
+      return cleaned;
+    }
+    if (cleaned.length === 10 && cleaned.startsWith('7')) {
+      return '254' + cleaned;
+    }
+    return cleaned;
+  };
 
+  // Validate M-Pesa phone number
+  const validatePhoneNumber = (phone: string): boolean => {
+    const formatted = formatPhoneNumber(phone);
+    return formatted.length === 12 && formatted.startsWith('254');
+  };
+
+  // Auth helper
+  const getAuthToken = () => {
+    return localStorage.getItem('access_token') || 
+           document.cookie.split('; ').find(row => row.startsWith('access_token='))?.split('=')[1];
+  };
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -71,6 +92,7 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
       setError('');
       setWithdrawalId('');
       setTrackingId('');
+      setPhoneNumber('');
       setDestination(method === 'crypto' && walletAddress ? walletAddress : '');
       fetchWithdrawalHistory();
       
@@ -163,7 +185,7 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
   };
 
   const getNumericBalance = (val: string) => parseFloat(val.replace(/,/g, '')) || 0;
-  const currentBalance = method === 'paypal' ? getNumericBalance(balances.kes) : getNumericBalance(balances.usdt);
+  const currentBalance = method === 'mpesa' ? getNumericBalance(balances.kes) : getNumericBalance(balances.usdt);
   const inputAmount = parseFloat(amount) || 0;
   
   // Fee Logic
@@ -180,23 +202,23 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
     
     feePercentage = Math.max(0.25, feePercentage - loyaltyDiscount - volumeDiscount);
     
-    // Additional fee for PayPal payouts
-    if (method === 'paypal') feePercentage += 0.25;
+    // Additional fee for M-Pesa withdrawals
+    if (method === 'mpesa') feePercentage += 0.5;
     
     const fee = (inputAmount * feePercentage) / 100;
-    return Math.max(fee, method === 'paypal' ? 45 : 5);
+    return Math.max(fee, method === 'mpesa' ? 30 : 5);
   };
   
   const fee = calculateFee();
   const youReceive = inputAmount - fee;
   const feePercentage = inputAmount > 0 ? ((fee / inputAmount) * 100).toFixed(2) : "0.00";
-  const minAmount = method === 'paypal' ? 50 : 10;
+  const minAmount = method === 'mpesa' ? 50 : 10;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (inputAmount < minAmount) {
-      setError(`Minimum withdrawal is ${method === 'paypal' ? 'KES 50' : '$10'}`);
+      setError(`Minimum withdrawal is ${method === 'mpesa' ? 'KES 50' : '$10'}`);
       return;
     }
     if (inputAmount > currentBalance) {
@@ -204,11 +226,9 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
       return;
     }
     
-    if (method === 'paypal') {
-      // Simple email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(destination)) {
-        setError('Please enter a valid PayPal email address');
+    if (method === 'mpesa') {
+      if (!validatePhoneNumber(phoneNumber)) {
+        setError('Please enter a valid M-Pesa phone number (e.g., 0712345678)');
         return;
       }
     } else if (method === 'crypto' && !walletAddress) {
@@ -230,21 +250,21 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
 
       const reference = `WDR_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
       
-      const endpoint = method === 'paypal' 
-        ? `${API_URL}/api/v1/wallet/withdraw/paypal`
+      const endpoint = method === 'mpesa' 
+        ? `${API_URL}/api/v1/wallet/withdraw/mpesa`
         : `${API_URL}/api/v1/wallet/withdraw/crypto`;
 
       const requestBody: any = {
         amount: inputAmount,
-        currency: method === 'paypal' ? 'KES' : 'USDT',
+        currency: method === 'mpesa' ? 'KES' : 'USDT',
         reference: reference,
         fee: fee,
         fee_percentage: parseFloat(feePercentage)
       };
 
-      if (method === 'paypal') {
-        requestBody.paypal_email = destination;
-        requestBody.provider = 'paypal';
+      if (method === 'mpesa') {
+        requestBody.phone_number = formatPhoneNumber(phoneNumber);
+        requestBody.provider = 'mpesa';
       } else {
         requestBody.wallet_address = destination;
       }
@@ -267,7 +287,7 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
       setWithdrawalId(data.withdrawal_id || data.payout_id || data.id);
       setTrackingId(data.tracking_id || data.conversation_id || data.order_tracking_id || '');
 
-      if (method === 'paypal' && (data.payout_id || data.id || data.conversation_id)) {
+      if (data.payout_id || data.id || data.conversation_id) {
         startPolling(data.payout_id || data.id || data.conversation_id);
       } else {
         setStep('success');
@@ -297,7 +317,7 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
       <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
         
         {/* Top Gradient Bar */}
-        <div className="h-2 bg-gradient-to-r from-amber-500 to-amber-400" />
+        <div className="h-2 bg-gradient-to-r from-emerald-500 to-emerald-400" />
 
         {/* HEADER */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white">
@@ -342,21 +362,21 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
               {/* ASSET SELECTOR */}
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <Wallet size={12} className="text-amber-500" />
+                  <Wallet size={12} className="text-emerald-500" />
                   Withdrawal Method
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <button 
                     type="button" 
-                    onClick={() => setMethod('paypal')}
+                    onClick={() => setMethod('mpesa')}
                     className={`flex items-center gap-2 px-3 py-4 rounded-xl border-2 transition-all ${
-                      method === 'paypal' 
+                      method === 'mpesa' 
                         ? 'bg-emerald-50 border-emerald-300 text-emerald-700 shadow-sm' 
                         : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-200 hover:bg-emerald-50/30'
                     }`}
                   >
                     <Smartphone size={20} />
-                    <span className="text-sm font-black">PayPal</span>
+                    <span className="text-sm font-black">M-Pesa</span>
                   </button>
                   
                   <button 
@@ -364,8 +384,8 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
                     onClick={() => setMethod('crypto')}
                     className={`flex items-center gap-2 px-3 py-4 rounded-xl border-2 transition-all ${
                       method === 'crypto' 
-                        ? 'bg-blue-50 border-blue-300 text-blue-700 shadow-sm' 
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-blue-200 hover:bg-blue-50/30'
+                        ? 'bg-purple-50 border-purple-300 text-purple-700 shadow-sm' 
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-purple-200 hover:bg-purple-50/30'
                     }`}
                   >
                     <Bitcoin size={20} />
@@ -377,12 +397,12 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
               {/* BALANCE STATUS */}
               <div className="bg-gradient-to-br from-slate-50 to-white p-5 rounded-xl border-2 border-slate-200">
                 <p className="text-xs font-bold text-slate-500 mb-1 flex items-center gap-1.5">
-                  <Wallet size={12} className="text-amber-500" />
+                  <Wallet size={12} className="text-emerald-500" />
                   Available Balance
                 </p>
                 <p className="text-2xl font-black text-slate-900">
-                  {method === 'paypal' ? balances.kes : balances.usdt} 
-                  <span className="text-sm font-bold text-slate-400 ml-2">{method === 'paypal' ? 'KES' : 'USDT'}</span>
+                  {method === 'mpesa' ? balances.kes : balances.usdt} 
+                  <span className="text-sm font-bold text-slate-400 ml-2">{method === 'mpesa' ? 'KES' : 'USDT'}</span>
                 </p>
               </div>
 
@@ -395,44 +415,48 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
                       type="number" 
                       value={amount} 
                       onChange={(e) => setAmount(e.target.value)}
-                      className="w-full px-4 py-4 bg-white border-2 border-slate-200 rounded-xl text-sm outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all font-bold"
+                      className="w-full px-4 py-4 bg-white border-2 border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all font-bold"
                       placeholder="0.00" 
                       required
                       min={minAmount}
                       step="0.01"
                     />
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
-                      {method === 'paypal' ? 'KES' : 'USDT'}
+                      {method === 'mpesa' ? 'KES' : 'USDT'}
                     </div>
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-xs font-bold text-slate-700 mb-1.5 block">
-                    {method === 'paypal' ? 'PayPal Email' : 'Wallet Address'}
-                  </label>
-                  {method === 'paypal' ? (
+                {method === 'mpesa' ? (
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 mb-1.5 block flex items-center gap-1.5">
+                      <Phone size={12} className="text-emerald-500" />
+                      M-Pesa Phone Number
+                    </label>
                     <input
-                      type="email" 
-                      value={destination} 
-                      onChange={(e) => setDestination(e.target.value)}
-                      className="w-full px-4 py-4 bg-white border-2 border-slate-200 rounded-xl text-sm outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all"
-                      placeholder="you@example.com" 
+                      type="tel" 
+                      value={phoneNumber} 
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      className="w-full px-4 py-4 bg-white border-2 border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all"
+                      placeholder="0712345678" 
                       required
                     />
-                  ) : (
+                    <p className="text-[10px] font-mono text-slate-400 mt-1">
+                      Enter your M-Pesa registered phone number
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 mb-1.5 block">
+                      Wallet Address
+                    </label>
                     <div className="p-4 bg-slate-50 rounded-xl border-2 border-slate-200">
                       <p className="text-xs font-mono text-slate-600 break-all">
                         {walletAddress || 'Connect wallet to continue'}
                       </p>
                     </div>
-                  )}
-                  {method === 'paypal' && (
-                    <p className="text-[10px] font-mono text-slate-400 mt-1">
-                      Enter your PayPal email address
-                    </p>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* CARD METHOD - Coming Soon */}
@@ -457,13 +481,13 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500 font-bold">Fee ({feePercentage}%)</span>
                     <span className="font-black text-slate-900">
-                      {method === 'paypal' ? 'KES' : '$'}{fee.toFixed(2)}
+                      {method === 'mpesa' ? 'KES' : '$'}{fee.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm pt-3 border-t-2 border-slate-200">
                     <span className="text-slate-700 font-black">You receive</span>
                     <span className="font-black text-emerald-600">
-                      {method === 'paypal' ? 'KES' : '$'}{youReceive.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {method === 'mpesa' ? 'KES' : '$'}{youReceive.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>
@@ -479,7 +503,7 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
               <button
                 type="submit"
                 disabled={loading || inputAmount <= 0}
-                className="w-full py-4 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
                 {loading ? <Loader2 size={18} className="animate-spin mx-auto" /> : 'Withdraw Funds'}
               </button>
@@ -493,17 +517,21 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
           {step === 'processing' && (
             <div className="py-10 text-center space-y-4">
               <div className="relative w-20 h-20 mx-auto">
-                <div className="absolute inset-0 bg-amber-100 rounded-full animate-ping opacity-50" />
-                <div className="relative w-20 h-20 bg-gradient-to-br from-amber-50 to-amber-100 rounded-full border-2 border-amber-200 flex items-center justify-center">
-                  <Loader2 size={40} className="animate-spin text-amber-600" />
+                <div className="absolute inset-0 bg-emerald-100 rounded-full animate-ping opacity-50" />
+                <div className="relative w-20 h-20 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-full border-2 border-emerald-200 flex items-center justify-center">
+                  <Loader2 size={40} className="animate-spin text-emerald-600" />
                 </div>
-                <Shield size={20} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-amber-600" />
+                {method === 'mpesa' ? (
+                  <Smartphone size={20} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-emerald-600" />
+                ) : (
+                  <Bitcoin size={20} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-emerald-600" />
+                )}
               </div>
               <div>
                 <h3 className="text-base font-black text-slate-900">Processing Withdrawal</h3>
                 <p className="text-xs text-slate-500 mt-2 max-w-xs mx-auto">
-                  {method === 'paypal' 
-                    ? 'Please wait while we process your PayPal withdrawal through our secure gateway' 
+                  {method === 'mpesa' 
+                    ? 'Please wait while we process your M-Pesa withdrawal through our secure gateway' 
                     : 'Please wait while we process your crypto withdrawal'}
                 </p>
               </div>
@@ -513,9 +541,9 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
                 </div>
               )}
               <div className="flex items-center justify-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           )}
@@ -531,8 +559,8 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
               <div>
                 <h3 className="text-base font-black text-slate-900">Withdrawal Complete</h3>
                 <p className="text-xs text-slate-500 mt-2">
-                  {method === 'paypal' 
-                    ? 'Funds have been sent to your PayPal' 
+                  {method === 'mpesa' 
+                    ? 'Funds have been sent to your M-Pesa account' 
                     : 'Funds have been sent to your wallet'}
                 </p>
               </div>
@@ -556,7 +584,7 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
 
               <button 
                 onClick={handleClose} 
-                className="w-full py-4 bg-gradient-to-r from-amber-600 to-amber-500 text-white rounded-xl text-sm font-bold hover:from-amber-700 hover:to-amber-600 transition-all shadow-lg"
+                className="w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-xl text-sm font-bold hover:from-emerald-700 hover:to-emerald-600 transition-all shadow-lg"
               >
                 Close
               </button>
@@ -586,7 +614,7 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
                 </button>
                 <button 
                   onClick={handleClose} 
-                  className="flex-1 py-4 bg-gradient-to-r from-amber-600 to-amber-500 text-white rounded-xl text-sm font-bold hover:from-amber-700 hover:to-amber-600 transition-all shadow-lg"
+                  className="flex-1 py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-xl text-sm font-bold hover:from-emerald-700 hover:to-emerald-600 transition-all shadow-lg"
                 >
                   Close
                 </button>
@@ -606,7 +634,7 @@ export default function WithdrawalModal({ isOpen, onClose, balances, walletAddre
             <span>Instant processing</span>
           </div>
           <div className="flex items-center gap-2 text-[9px] text-slate-400">
-            <Sparkles size={10} className="text-amber-500" />
+            <Sparkles size={10} className="text-emerald-500" />
             <span>No hidden fees</span>
           </div>
         </div>

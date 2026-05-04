@@ -7,12 +7,12 @@ import {
   Loader2, ArrowRight, Eye, EyeOff, Mail, Lock, 
   Building2, ChevronLeft, ShieldCheck, 
   AlertCircle, CheckCircle2, Key, 
-  Check, X, User, Briefcase, Shield
+  Check, X, User, Briefcase
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/useNotificationStore';
 
 // --- Types ---
-type UserRole = 'INFLUENCER' | 'BUSINESS' | 'ADMIN';
+type UserRole = 'INFLUENCER' | 'BUSINESS';
 
 interface RegistrationData {
   email: string;
@@ -81,12 +81,10 @@ const validatePassword = (password: string, confirmPassword: string): PasswordVa
 const getDashboardRoute = (role: string): string => {
   const roleLower = role.toLowerCase();
   switch (roleLower) {
-    case 'admin':
-      return '/admin/dashboard';
     case 'business':
       return '/business/dashboard';
     case 'influencer':
-      return '/influencer/dashboard';
+      return '/client/dashboard';
     default:
       return '/client/dashboard';
   }
@@ -289,14 +287,11 @@ export default function RegistrationPage() {
   // Role icon and description
   const getRoleInfo = (role: UserRole) => {
     switch(role) {
-      case 'INFLUENCER':
-        return { icon: User, title: 'Creator', description: 'Join campaigns, earn rewards' };
       case 'BUSINESS':
-        return { icon: Briefcase, title: 'Business', description: 'Launch campaigns, manage team' };
-      case 'ADMIN':
-        return { icon: Shield, title: 'Admin', description: 'Platform management' };
+        return { icon: Briefcase, title: 'Business', description: 'Launch campaigns, manage team, access analytics' };
+      case 'INFLUENCER':
       default:
-        return { icon: User, title: 'Creator', description: 'Join campaigns, earn rewards' };
+        return { icon: User, title: 'Creator', description: 'Join campaigns, earn rewards, showcase your work' };
     }
   };
 
@@ -340,19 +335,19 @@ export default function RegistrationPage() {
           {/* STEP 1: REGISTRATION FORM */}
           {step === 1 && (
             <form onSubmit={handleRegister} className="space-y-5">
-              {/* Role Selector - Now with 3 roles */}
-              <div className="grid grid-cols-3 gap-2 p-1 bg-slate-50 rounded-xl border border-slate-100">
-                {(['INFLUENCER', 'BUSINESS', 'ADMIN'] as UserRole[]).map((r) => {
+              {/* Role Selector - Only INFLUENCER and BUSINESS */}
+              <div className="grid grid-cols-2 gap-3 p-1 bg-slate-50 rounded-xl border border-slate-100">
+                {(['INFLUENCER', 'BUSINESS'] as UserRole[]).map((r) => {
                   const { icon: Icon, title } = getRoleInfo(r);
                   return (
                     <button
                       key={r} type="button"
                       onClick={() => setFormData({ ...formData, role: r })}
-                      className={`py-2 px-1 text-xs font-bold uppercase tracking-wider rounded-lg transition-all flex flex-col items-center gap-1 ${
+                      className={`py-3 text-xs font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 ${
                         formData.role === r ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'
                       }`}
                     >
-                      <Icon size={14} />
+                      <Icon size={16} />
                       <span>{title}</span>
                     </button>
                   );
@@ -360,7 +355,7 @@ export default function RegistrationPage() {
               </div>
 
               {/* Role description */}
-              <div className="text-center text-xs text-slate-400">
+              <div className="text-center text-xs text-slate-500 bg-slate-50 py-2 rounded-lg">
                 {roleInfo.description}
               </div>
 
@@ -600,7 +595,7 @@ export default function RegistrationPage() {
                 onClick={handleDashboardRedirect}
                 className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold transition-all flex justify-center items-center gap-2"
               >
-                Go to {registrationData.role} Dashboard <ArrowRight size={18} />
+                Go to {registrationData.role === 'business' ? 'Business' : 'Creator'} Dashboard <ArrowRight size={18} />
               </button>
             </div>
           )}

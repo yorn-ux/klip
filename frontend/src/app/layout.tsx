@@ -73,14 +73,14 @@ const NAV_MAP: Record<UserRole, { label: string; href: string; icon: any }[]> = 
     { label: 'Vaults', href: '/vaults', icon: Lock },
     { label: 'Explore', href: '/client/explore', icon: Briefcase },
     { label: 'Wallet', href: '/wallet', icon: Wallet },
-    { label: 'Support', href: '/support', icon: HelpCircle },
+    { label: 'Support', href: '/dispute', icon: HelpCircle },
   ],
   business: [
     { label: 'Overview', href: '/business/dashboard', icon: LayoutDashboard },
     { label: 'Campaigns', href: '/vaults', icon: Briefcase },
     { label: 'Finances', href: '/wallet', icon: Wallet },
     { label: 'Analytics', href: '/business/analytics', icon: LineChart },
-    { label: 'Support', href: '/support', icon: HelpCircle },
+    { label: 'Support', href: '/dispute', icon: HelpCircle },
   ],
   admin: [
     { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
@@ -88,7 +88,7 @@ const NAV_MAP: Record<UserRole, { label: string; href: string; icon: any }[]> = 
     { label: 'Users', href: '/admin/users', icon: Users },
     { label: 'System', href: '/admin/health', icon: Activity },
     { label: 'Audit', href: '/admin/audit', icon: FileText },
-    { label: 'Disputes', href: '/support', icon: Scale },
+    { label: 'Disputes', href: '/dispute', icon: Scale },
   ]
 };
 
