@@ -136,7 +136,6 @@ export default function LoginPage() {
       
       showToast("Login successful!", "success");
       
-      // Turn on redirecting block right before pushing route
       setIsRedirecting(true);
       const dashboardRoute = getDashboardRoute(userRole);
       router.push(dashboardRoute);
@@ -180,7 +179,7 @@ export default function LoginPage() {
       }
     } catch (err) {
       showToast("Failed to resend code", "error");
-    } : null {
+    } finally {
       setIsResending(false);
     }
   };
