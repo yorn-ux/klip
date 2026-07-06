@@ -24,6 +24,11 @@ const setCookie = (name: string, value: string, hours: number = 1) => {
   document.cookie = `${name}=${value}; path=/; expires=${expires.toUTCString()}; SameSite=Lax`;
 };
 
+interface VerificationData {
+  email: string;
+  requiresVerification: boolean;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const { showToast } = useNotificationStore();
@@ -46,7 +51,7 @@ export default function LoginPage() {
   const [countdown, setCountdown] = useState(0);
   const [isResending, setIsResending] = useState(false);
 
-  // CHECK IF ALREADY LOGGED IN - Prevents infinite loop
+  // CHECK IF ALREADY LOGGED IN
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     const userRole = localStorage.getItem('user_role');
@@ -62,7 +67,7 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isRedirecting) return;
+    if (isRedirecting || isLoading) return;
     
     if (!formData.email || !formData.password) {
       showToast("Please enter both email and password", "error");
@@ -70,7 +75,6 @@ export default function LoginPage() {
     }
     
     setIsLoading(true);
-    setIsRedirecting(true);
     
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -87,7 +91,6 @@ export default function LoginPage() {
       
       // Handle unverified email
       if (response.status === 403 && data.detail?.includes("Email not verified")) {
-        setIsRedirecting(false);
         setVerificationData({
           email: formData.email.toLowerCase().trim(),
           requiresVerification: true
@@ -133,9 +136,10 @@ export default function LoginPage() {
       
       showToast("Login successful!", "success");
       
-      // Redirect to dashboard
+      // Turn on redirecting block right before pushing route
+      setIsRedirecting(true);
       const dashboardRoute = getDashboardRoute(userRole);
-      window.location.href = dashboardRoute;
+      router.push(dashboardRoute);
       
     } catch (err: any) {
       console.error('Login error:', err);
@@ -176,7 +180,7 @@ export default function LoginPage() {
       }
     } catch (err) {
       showToast("Failed to resend code", "error");
-    } finally {
+    } : null {
       setIsResending(false);
     }
   };
@@ -189,7 +193,6 @@ export default function LoginPage() {
     }
 
     setIsVerifying(true);
-    setIsRedirecting(true);
     
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -210,7 +213,6 @@ export default function LoginPage() {
         const token = data.access_token;
         const expiresIn = data.expires_in || 1800;
         
-        // Store in localStorage
         localStorage.setItem('access_token', token);
         localStorage.setItem('user_email', verificationData?.email || '');
         
@@ -232,7 +234,6 @@ export default function LoginPage() {
         
         localStorage.setItem('user_role', userRole);
         
-        // ALSO SET COOKIES FOR MIDDLEWARE
         const cookieHours = expiresIn / 3600;
         setCookie('access_token', token, cookieHours);
         setCookie('user_role', userRole, cookieHours);
@@ -240,9 +241,9 @@ export default function LoginPage() {
         
         showToast("Email verified successfully!", "success");
         
-        // Redirect to dashboard
+        setIsRedirecting(true);
         const dashboardRoute = getDashboardRoute(userRole);
-        window.location.href = dashboardRoute;
+        router.push(dashboardRoute);
       }
       
     } catch (err: any) {
@@ -254,9 +255,9 @@ export default function LoginPage() {
   };
 
   // If already redirecting, show loading
-  if (isRedirecting && localStorage.getItem('access_token')) {
+  if (isRedirecting) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
           <Loader2 className="animate-spin w-8 h-8 text-slate-900 mx-auto mb-4" />
           <p className="text-sm text-slate-500">Redirecting to dashboard...</p>
@@ -267,7 +268,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans selection:bg-amber-100">
-      
       {/* Header */}
       <header className="p-6 flex justify-between items-center">
         <Link href="/" className="group flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
@@ -438,9 +438,4 @@ export default function LoginPage() {
       </footer>
     </div>
   );
-}
-
-interface VerificationData {
-  email: string;
-  requiresVerification: boolean;
 }
