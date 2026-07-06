@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+/**
+ * Core routing rules engine (The Proxy Layer)
+ * Separated to allow decoupled testing and clean modular calls.
+ */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
@@ -67,18 +71,19 @@ export async function proxy(request: NextRequest) {
 
   // B. AUTH ROUTES - If logged in, redirect to dashboard
   if (isAuthRoute) {
+    if (request.nextUrl.searchParams.has('loop_bypass')) {
+      return NextResponse.next();
+    }
+
     if (token && userRole) {
-      // User is logged in - redirect to their dashboard
       const dashboardUrl = new URL(userHome, request.url);
       return NextResponse.redirect(dashboardUrl);
     }
-    // User is logged out - allow access to auth pages
     return NextResponse.next();
   }
 
   // C. PROTECTED ROUTES - Require authentication
   if (!token) {
-    // No token - redirect to login
     const loginUrl = new URL('/auth/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
@@ -86,7 +91,6 @@ export async function proxy(request: NextRequest) {
 
   // D. If token exists but no role, let root layout handle it
   if (!userRole) {
-    // Allow access, root layout will fetch user data
     return NextResponse.next();
   }
 
@@ -96,23 +100,33 @@ export async function proxy(request: NextRequest) {
   }
 
   // F. ROLE-BASED ACCESS CONTROL
-  // Admin routes - only admin can access
   if (isAdminRoute && userRole !== 'admin') {
-    return NextResponse.redirect(new URL(userHome, request.url));
+    const fallbackUrl = new URL(userHome, request.url);
+    fallbackUrl.searchParams.set('loop_bypass', '1');
+    return NextResponse.redirect(fallbackUrl);
   }
   
-  // Business routes - only business can access
   if (isBusinessRoute && !['business', 'brand', 'enterprise', 'operator'].includes(userRole)) {
-    return NextResponse.redirect(new URL(userHome, request.url));
+    const fallbackUrl = new URL(userHome, request.url);
+    fallbackUrl.searchParams.set('loop_bypass', '1');
+    return NextResponse.redirect(fallbackUrl);
   }
 
-  // Client routes - only influencers/clients can access
   if (isClientRoute && !['influencer', 'client'].includes(userRole)) {
-    return NextResponse.redirect(new URL(userHome, request.url));
+    const fallbackUrl = new URL(userHome, request.url);
+    fallbackUrl.searchParams.set('loop_bypass', '1');
+    return NextResponse.redirect(fallbackUrl);
   }
 
-  // Allow the request to proceed
   return NextResponse.next();
+}
+
+/**
+ * Required Next.js Base Entry Point.
+ * Simply pipes the application context down into your proxy logic block.
+ */
+export async function middleware(request: NextRequest) {
+  return await proxy(request);
 }
 
 export const config = {
