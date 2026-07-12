@@ -214,7 +214,15 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       }
 
       // Get token from localStorage
-      const token = localStorage.getItem('access_token');
+      // Use token helper to validate expiry
+      let token: string | null = null;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { getAccessToken } = require('@/lib/token');
+        token = getAccessToken();
+      } catch (err) {
+        token = localStorage.getItem('access_token');
+      }
       
       if (!token) {
         router.replace('/auth/login');

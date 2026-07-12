@@ -40,21 +40,24 @@ export default function BusinessDashboard() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   const KES_TO_USD = 0.0076;
 
-   // Get auth token from localStorage or cookies
+   // Use centralized token helper to validate expiry
    const getAuthToken = useCallback(() => {
-     if (typeof document === 'undefined') return null;
-     // Prefer the standard `access_token` in localStorage (set by login)
-     const local = localStorage.getItem('access_token');
-     if (local) return local;
-
-     const getCookie = (name: string) => {
-       const value = `; ${document.cookie}`;
-       const parts = value.split(`; ${name}=`);
-       if (parts.length === 2) return parts.pop()?.split(';').shift();
-       return null;
-     };
-
-     return getCookie('access_token') || localStorage.getItem('auth_token');
+     try {
+       // eslint-disable-next-line @typescript-eslint/no-var-requires
+       const { getAccessToken } = require('@/lib/token');
+       return getAccessToken();
+     } catch (err) {
+       if (typeof document === 'undefined') return null;
+       const local = localStorage.getItem('access_token');
+       if (local) return local;
+       const getCookie = (name: string) => {
+         const value = `; ${document.cookie}`;
+         const parts = value.split(`; ${name}=`);
+         if (parts.length === 2) return parts.pop()?.split(';').shift();
+         return null;
+       };
+       return getCookie('access_token') || localStorage.getItem('auth_token');
+     }
    }, []);
 
   // Get user identity from localStorage or fetch if token exists but user missing

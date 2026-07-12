@@ -113,10 +113,18 @@ export default function LoginPage() {
 
       // Store token and user data
       const token = data.access_token;
-      const expiresIn = data.expires_in || 1800; // 30 minutes default
+      const expiresIn = data.expires_in || 3600; // default to 1 hour
       
-      // Store in localStorage
-      localStorage.setItem('access_token', token);
+      // Store in localStorage with expiry
+      try {
+        const { setAccessToken } = await import('@/lib/token');
+        setAccessToken(token, expiresIn);
+      } catch (err) {
+        // fallback
+        localStorage.setItem('access_token', token);
+        const exp = Date.now() + expiresIn * 1000;
+        localStorage.setItem('access_token_exp', exp.toString());
+      }
       
       let userRole = 'influencer';
       if (data.user && data.user.role) {
@@ -208,11 +216,18 @@ export default function LoginPage() {
       
       if (!res.ok) throw new Error(data.detail || "Verification failed");
 
-      if (data.access_token) {
+        if (data.access_token) {
         const token = data.access_token;
-        const expiresIn = data.expires_in || 1800;
+        const expiresIn = data.expires_in || 3600;
         
-        localStorage.setItem('access_token', token);
+        try {
+          const { setAccessToken } = await import('@/lib/token');
+          setAccessToken(token, expiresIn);
+        } catch (err) {
+          localStorage.setItem('access_token', token);
+          const exp = Date.now() + expiresIn * 1000;
+          localStorage.setItem('access_token_exp', exp.toString());
+        }
         localStorage.setItem('user_email', verificationData?.email || '');
         
         let userRole = 'influencer';

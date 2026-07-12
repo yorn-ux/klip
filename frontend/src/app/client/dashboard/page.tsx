@@ -18,21 +18,26 @@ export default function InfluencerDashboard() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   const KES_TO_USD = 0.0076; 
 
-   // Get auth token - FIXED to match login page
+   // Get auth token via helper that checks expiry
    const getAuthToken = useCallback(() => {
-     // First try localStorage (where login stores it)
-     const localToken = localStorage.getItem('access_token');
-     if (localToken) return localToken;
-     
-     // Fallback to cookies
-     if (typeof document === 'undefined') return null;
-     const getCookie = (name: string) => {
-       const value = `; ${document.cookie}`;
-       const parts = value.split(`; ${name}=`);
-       if (parts.length === 2) return parts.pop()?.split(';').shift();
-       return null;
-     };
-     return getCookie('access_token');
+     try {
+       // dynamic import to avoid SSR issues
+       // eslint-disable-next-line @typescript-eslint/no-var-requires
+       const { getAccessToken } = require('@/lib/token');
+       return getAccessToken();
+     } catch (err) {
+       // fallback: read raw localStorage
+       const localToken = localStorage.getItem('access_token');
+       if (localToken) return localToken;
+       if (typeof document === 'undefined') return null;
+       const getCookie = (name: string) => {
+         const value = `; ${document.cookie}`;
+         const parts = value.split(`; ${name}=`);
+         if (parts.length === 2) return parts.pop()?.split(';').shift();
+         return null;
+       };
+       return getCookie('access_token');
+     }
    }, []);
 
   const fetchData = useCallback(async (opId: string) => {
