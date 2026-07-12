@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Loader2, ArrowRight, Eye, EyeOff, Mail, Lock, 
-  ChevronLeft, ShieldCheck, AlertCircle, 
+  ShieldCheck, AlertCircle, 
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/useNotificationStore';
 
@@ -281,173 +281,211 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans selection:bg-amber-100">
-      {/* Header */}
-      <header className="p-6 flex justify-between items-center">
-        <Link href="/" className="group flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
-          <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-          <span>Back to Home</span>
-        </Link>
-        <Link href="/auth/register" className="text-sm font-medium text-slate-900 bg-slate-100 px-4 py-2 rounded-lg hover:bg-slate-200 transition-colors">
-          Create account
-        </Link>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.16),_transparent_30%),linear-gradient(135deg,_#f8fafc_0%,_#fffbeb_100%)] text-slate-900 flex flex-col font-sans selection:bg-amber-100">
+      <header className="px-4 py-5 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-6xl items-center justify-between">
+          <Link href="/" className="group flex items-center gap-3 text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-lg font-black text-amber-400 shadow-lg shadow-slate-900/10">
+              K
+            </span>
+            <span className="text-base tracking-tight">Klip</span>
+          </Link>
+          <Link href="/auth/register" className="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-white hover:text-slate-900">
+            Create account
+          </Link>
+        </div>
       </header>
 
-      <main className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-[440px]">
-          
-          {/* LOGO AREA */}
-          <div className="text-center mb-8">
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 shadow-xl mb-5">
-              <span className="text-amber-400 text-2xl font-black">K</span>
+      <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+        <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="relative overflow-hidden rounded-[32px] border border-white/70 bg-white/85 p-6 shadow-[0_30px_90px_rgba(15,23,42,0.10)] backdrop-blur-xl sm:p-8 lg:p-10">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(251,191,36,0.18),_transparent_35%)]" />
+            <div className="relative">
+              <div className="mb-8 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.24em] text-amber-600">Secure access</p>
+                  <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                    {verificationData ? "Verify your email" : "Welcome back"}
+                  </h1>
+                </div>
+                <div className="hidden rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500 sm:block">
+                  Protected login
+                </div>
+              </div>
+
+              <p className="mb-8 text-sm leading-6 text-slate-600 sm:text-[15px]">
+                {verificationData
+                  ? "Enter the 6-digit code sent to your email to continue securely."
+                  : "Sign in to your Klip account and manage your workspace with confidence."}
+              </p>
+
+              {verificationData ? (
+                <div className="space-y-6">
+                  <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <AlertCircle className="mt-0.5 shrink-0 text-amber-600" size={18} />
+                    <div className="text-sm leading-6 text-amber-800">
+                      <p className="font-semibold">Email not verified</p>
+                      <p className="mt-1">We sent a verification code to <span className="font-mono font-semibold">{verificationData.email}</span>.</p>
+                      <p className="mt-1 text-amber-700">Please verify to access your account.</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      placeholder="Enter 6-digit code"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-2xl font-mono tracking-[0.5em] outline-none transition-all focus:border-slate-300 focus:bg-white focus:ring-4 focus:ring-slate-900/10"
+                      autoFocus
+                    />
+
+                    <button
+                      onClick={handleVerifyEmail}
+                      disabled={isVerifying || verificationCode.length !== 6}
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3.5 font-semibold text-white transition-all hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isVerifying ? <Loader2 className="animate-spin" size={18} /> : <><span>Verify & Continue</span><ArrowRight size={16} /></>}
+                    </button>
+
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <button
+                        onClick={resendVerificationCode}
+                        disabled={countdown > 0 || isResending}
+                        className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isResending ? (
+                          <Loader2 size={14} className="mr-1 inline animate-spin" />
+                        ) : countdown > 0 ? (
+                          `Resend in ${countdown}s`
+                        ) : (
+                          "Resend code"
+                        )}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setVerificationData(null);
+                          setVerificationCode('');
+                          setCountdown(0);
+                          setIsRedirecting(false);
+                        }}
+                        className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                      >
+                        Back to login
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleLogin} className="space-y-5">
+                  <div className="relative group">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-slate-900" size={18} />
+                    <input
+                      type="email"
+                      required
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-4 outline-none transition-all focus:border-slate-300 focus:bg-white focus:ring-4 focus:ring-slate-900/10"
+                      placeholder="Email address"
+                      value={formData.email}
+                      onChange={e => setFormData({...formData, email: e.target.value})}
+                      autoComplete="email"
+                    />
+                  </div>
+
+                  <div className="relative group">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-slate-900" size={18} />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-12 outline-none transition-all focus:border-slate-300 focus:bg-white focus:ring-4 focus:ring-slate-900/10"
+                      placeholder="Password"
+                      value={formData.password}
+                      onChange={e => setFormData({...formData, password: e.target.value})}
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-700"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Link
+                      href="/auth/forgot-password"
+                      className="text-sm text-slate-500 transition-colors hover:text-slate-900"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading || isRedirecting}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3.5 font-semibold text-white shadow-lg shadow-slate-200 transition-all hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
+                  >
+                    {isLoading ? <Loader2 className="animate-spin" size={18} /> : <><span>Sign in</span><ArrowRight size={18} /></>}
+                  </button>
+
+                  <div className="pt-2 text-center">
+                    <p className="text-sm text-slate-500">
+                      Don't have an account?{' '}
+                      <Link href="/auth/register" className="font-semibold text-slate-900 transition hover:underline">
+                        Create account
+                      </Link>
+                    </p>
+                  </div>
+                </form>
+              )}
+
+              <div className="mt-8 flex items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                <ShieldCheck size={12} className="mr-2 text-amber-500" />
+                Secure login with bank-grade encryption
+              </div>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              {verificationData ? "Verify your email" : "Welcome back"}
-            </h1>
-            <p className="text-slate-500 text-sm mt-1.5">
-              {verificationData 
-                ? "Enter the 6-digit code sent to your email" 
-                : "Sign in to your Klip account"}
-            </p>
           </div>
 
-          {/* VERIFICATION FORM */}
-          {verificationData ? (
-            <div className="space-y-6">
-              <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl flex gap-3 items-start">
-                <AlertCircle className="text-amber-600 shrink-0" size={18} />
-                <div className="text-xs text-amber-800 leading-relaxed">
-                  <p className="font-medium mb-1">Email not verified</p>
-                  <p>We've sent a verification code to <span className="font-mono font-medium">{verificationData.email}</span></p>
-                  <p className="mt-1 text-amber-600">Please verify to access your account.</p>
-                </div>
+          <div className="hidden flex-col justify-between rounded-[32px] border border-amber-100/80 bg-slate-900 p-8 text-white shadow-[0_30px_90px_rgba(15,23,42,0.15)] lg:flex">
+            <div>
+              <div className="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-amber-300">
+                Premium experience
               </div>
-
-              <div className="space-y-3">
-                <input 
-                  type="text"
-                  maxLength={6}
-                  placeholder="Enter 6-digit code"
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
-                  className="w-full px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-slate-300 focus:ring-2 focus:ring-slate-900/10 transition-all outline-none"
-                  autoFocus
-                />
-                
-                <button 
-                  onClick={handleVerifyEmail}
-                  disabled={isVerifying || verificationCode.length !== 6}
-                  className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold transition-all flex justify-center items-center gap-2 disabled:opacity-50"
-                >
-                  {isVerifying ? <Loader2 className="animate-spin" size={18} /> : <>Verify & Continue <ArrowRight size={16} /></>}
-                </button>
-
-                <div className="flex gap-3">
-                  <button 
-                    onClick={resendVerificationCode}
-                    disabled={countdown > 0 || isResending}
-                    className="flex-1 text-sm text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50 py-2"
-                  >
-                    {isResending ? (
-                      <Loader2 size={14} className="animate-spin inline mr-1" />
-                    ) : countdown > 0 ? (
-                      `Resend in ${countdown}s`
-                    ) : (
-                      "Resend code"
-                    )}
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setVerificationData(null);
-                      setVerificationCode('');
-                      setCountdown(0);
-                      setIsRedirecting(false);
-                    }}
-                    className="flex-1 text-sm text-slate-500 hover:text-slate-700 transition-colors"
-                  >
-                    Back to login
-                  </button>
-                </div>
-              </div>
+              <h2 className="mt-6 text-3xl font-semibold tracking-tight">Built for fast, secure team access.</h2>
+              <p className="mt-4 text-sm leading-7 text-slate-300">
+                Move from sign-in to action seamlessly while keeping every interaction protected and polished.
+              </p>
             </div>
-          ) : (
-            /* LOGIN FORM */
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={18} />
-                <input 
-                  type="email" required
-                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-transparent rounded-xl focus:bg-white focus:border-slate-200 focus:ring-2 focus:ring-slate-900/10 transition-all outline-none"
-                  placeholder="Email address"
-                  value={formData.email}
-                  onChange={e => setFormData({...formData, email: e.target.value})}
-                  autoComplete="email"
-                />
-              </div>
 
-              <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={18} />
-                <input 
-                  type={showPassword ? "text" : "password"} required
-                  className="w-full pl-12 pr-12 py-3 bg-slate-50 border border-transparent rounded-xl focus:bg-white focus:border-slate-200 focus:ring-2 focus:ring-slate-900/10 transition-all outline-none"
-                  placeholder="Password"
-                  value={formData.password}
-                  onChange={e => setFormData({...formData, password: e.target.value})}
-                  autoComplete="current-password"
-                />
-                <button 
-                  type="button" 
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+            <div className="space-y-4">
+              {[
+                "Instant access with role-based dashboards",
+                "Encrypted sessions and protected credentials",
+                "Modern controls for admins, teams, and clients"
+              ].map((item) => (
+                <div key={item} className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <ShieldCheck className="mt-0.5 shrink-0 text-amber-400" size={18} />
+                  <span className="text-sm text-slate-200">{item}</span>
+                </div>
+              ))}
+            </div>
 
-              <div className="flex justify-end">
-                <Link 
-                  href="/auth/forgot-password" 
-                  className="text-xs text-slate-500 hover:text-slate-900 transition-colors"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-
-              <button 
-                type="submit" 
-                disabled={isLoading || isRedirecting}
-                className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold transition-all flex justify-center items-center gap-2 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 shadow-lg shadow-slate-100"
-              >
-                {isLoading ? <Loader2 className="animate-spin" size={18} /> : <>Sign in <ArrowRight size={18} /></>}
-              </button>
-
-              <div className="text-center pt-4">
-                <p className="text-xs text-slate-400">
-                  Don't have an account?{' '}
-                  <Link href="/auth/register" className="text-slate-900 font-medium hover:underline">
-                    Create account
-                  </Link>
-                </p>
-              </div>
-            </form>
-          )}
-
-          {/* Security Notice */}
-          <div className="mt-8 text-center">
-            <div className="inline-flex items-center gap-2 text-[10px] text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full">
-              <ShieldCheck size={12} />
-              <span>Secure login with bank-grade encryption</span>
+            <div className="rounded-2xl border border-white/10 bg-white/10 p-4 text-sm text-slate-300">
+              <p className="font-semibold text-white">Trusted by modern operators</p>
+              <p className="mt-2">Security-first workflows designed for clarity, speed, and control.</p>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="p-6 flex flex-col md:flex-row items-center justify-between gap-3 border-t border-slate-100">
-        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">© 2025 Klip Secure Infrastructure</p>
-        <div className="flex gap-6">
-          <Link href="/privacy" className="text-[10px] text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-wider font-medium">Privacy</Link>
-          <Link href="/terms" className="text-[10px] text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-wider font-medium">Protocol</Link>
+      <footer className="border-t border-slate-200/70 bg-white/60 px-4 py-6 backdrop-blur sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 md:flex-row">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-slate-400">© 2025 Klip Secure Infrastructure</p>
+          <div className="flex gap-6">
+            <Link href="/privacy" className="text-[10px] font-semibold uppercase tracking-[0.25em] text-slate-400 transition-colors hover:text-slate-900">Privacy</Link>
+            <Link href="/terms" className="text-[10px] font-semibold uppercase tracking-[0.25em] text-slate-400 transition-colors hover:text-slate-900">Protocol</Link>
+          </div>
         </div>
       </footer>
     </div>
