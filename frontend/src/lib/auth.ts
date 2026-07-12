@@ -56,8 +56,8 @@ export const {
     },
   },
   pages: {
-    signIn: '/client/login',
-    error: '/client/login',
+    signIn: '/auth/login',
+    error: '/auth/login',
   },
   debug: process.env.NODE_ENV === 'development',
 });

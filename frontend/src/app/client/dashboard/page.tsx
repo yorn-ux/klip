@@ -74,6 +74,7 @@ export default function InfluencerDashboard() {
       const token = getAuthToken();
       
       if (!token) {
+        setIsCheckingAuth(false);
         router.replace('/auth/login');
         return;
       }
@@ -105,11 +106,13 @@ export default function InfluencerDashboard() {
           } else {
             // Token invalid
             localStorage.removeItem('access_token');
+            setIsCheckingAuth(false);
             router.replace('/auth/login');
             return;
           }
         } catch (err) {
           console.error("Failed to fetch user data:", err);
+          setIsCheckingAuth(false);
           router.replace('/auth/login');
           return;
         }
