@@ -40,38 +40,76 @@ export default function BusinessDashboard() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   const KES_TO_USD = 0.0076;
 
-   // Get auth token from cookies
+   // Get auth token from localStorage or cookies
    const getAuthToken = useCallback(() => {
      if (typeof document === 'undefined') return null;
+     // Prefer the standard `access_token` in localStorage (set by login)
+     const local = localStorage.getItem('access_token');
+     if (local) return local;
+
      const getCookie = (name: string) => {
        const value = `; ${document.cookie}`;
        const parts = value.split(`; ${name}=`);
        if (parts.length === 2) return parts.pop()?.split(';').shift();
+       return null;
      };
+
      return getCookie('access_token') || localStorage.getItem('auth_token');
    }, []);
 
-  // Get user identity from localStorage
+  // Get user identity from localStorage or fetch if token exists but user missing
   useEffect(() => {
     setMounted(true);
-    const storedUser = localStorage.getItem('klip_user');
-    if (storedUser) {
-      try {
-        const parsed = JSON.parse(storedUser);
-        setIdentity({ 
-          operator_id: parsed.operator_id || parsed.id || '', 
-          fullName: parsed.full_name || parsed.fullName || 'Business',
-          email: parsed.email || '',
-          avatar_url: parsed.avatar_url || ''
-        });
-      } catch (err) {
-        console.error("Failed to parse user data:", err);
-        router.push('/auth/login');
+
+    const init = async () => {
+      const storedUser = localStorage.getItem('klip_user');
+      const token = getAuthToken();
+
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          setIdentity({ 
+            operator_id: parsed.operator_id || parsed.id || '', 
+            fullName: parsed.full_name || parsed.fullName || 'Business',
+            email: parsed.email || '',
+            avatar_url: parsed.avatar_url || ''
+          });
+          return;
+        } catch (err) {
+          console.error("Failed to parse user data:", err);
+          // fall through to attempt fetch
+        }
       }
-    } else {
+
+      // If we have a token, try to fetch the user profile and store it
+      if (token) {
+        try {
+          const res = await fetch(`${API_URL}/api/v1/auth/me`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+
+          if (res.ok) {
+            const user = await res.json();
+            localStorage.setItem('klip_user', JSON.stringify(user));
+            setIdentity({
+              operator_id: user.operator_id || user.id || '',
+              fullName: user.full_name || user.fullName || 'Business',
+              email: user.email || '',
+              avatar_url: user.avatar_url || ''
+            });
+            return;
+          }
+        } catch (err) {
+          console.error('Failed to fetch profile for business dashboard:', err);
+        }
+      }
+
+      // No user and unable to fetch — redirect to login
       router.push('/auth/login');
-    }
-  }, [router]);
+    };
+
+    init();
+  }, [router, getAuthToken, API_URL]);
 
   // Fetch all dashboard data
   const fetchData = useCallback(async (opId: string) => {
