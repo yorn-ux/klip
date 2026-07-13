@@ -48,6 +48,7 @@ export default function SettingsHub() {
        
        try {
           const token = getAccessToken() || getCookie('access_token');
+          const storedUser = typeof window !== 'undefined' ? localStorage.getItem('klip_user') : null;
 
          if (!token || !storedUser) {
            throw new Error("Session expired. Please sign in again.");

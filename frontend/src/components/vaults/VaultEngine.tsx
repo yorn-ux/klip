@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { getAccessToken } from '@/lib/token';
 import { 
   Shield, Zap, ArrowLeft, Loader2, ArrowUpRight, Wallet, 
   Clock, AlertTriangle, ChevronRight, Activity, Plus, Trash2, CheckCircle2,
