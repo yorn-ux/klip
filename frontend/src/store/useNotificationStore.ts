@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { getAccessToken } from '@/lib/token';
 
 // Simple types
 export type NotificationType = 'info' | 'success' | 'error' | 'warning';
@@ -96,7 +97,7 @@ const API_VERSION = 'api/v1';
         if (token) return decodeURIComponent(token);
       }
       
-      return localStorage.getItem('auth_token');
+      return getAccessToken();
     } catch (error) {
       console.error('Error reading token:', error);
       return null;

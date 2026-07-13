@@ -13,6 +13,7 @@ import {
 // Sub-Components
 import { RegistrationModal } from '@/components/auth/RegistrationModal';
 import { OperatorProfileModal } from '@/components/admin/OperatorProfileModal';
+import { getAccessToken } from '@/lib/token';
 
 interface StatCardProps {
   label: string;
@@ -82,8 +83,8 @@ export default function OperatorLedger() {
    const getToken = useCallback((): string | null => {
      if (typeof window === 'undefined') return null;
      
-     const localToken = localStorage.getItem('auth_token');
-     if (localToken) return localToken;
+     const token = getAccessToken();
+     if (token) return token;
      
      const getCookie = (name: string): string | null => {
        const value = `; ${document.cookie}`;

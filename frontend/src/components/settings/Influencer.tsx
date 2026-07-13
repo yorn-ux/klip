@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { clearAccessToken, getAccessToken } from '@/lib/token';
 
 export default function InfluencerSettings({ data: initialData }: { data: any }) {
   const router = useRouter();
@@ -79,7 +80,13 @@ export default function InfluencerSettings({ data: initialData }: { data: any })
 
     setUploadingAvatar(true);
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = getAccessToken();
+      if (!token) {
+        alert('Your session has expired. Please sign in again.');
+        router.push('/auth/login');
+        return;
+      }
+
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
       const formData = new FormData();
@@ -118,7 +125,13 @@ export default function InfluencerSettings({ data: initialData }: { data: any })
   const freezeAccount = async () => {
     setIsFreezing(true);
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = getAccessToken();
+      if (!token) {
+        alert('Your session has expired. Please sign in again.');
+        router.push('/auth/login');
+        return;
+      }
+
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       
       // Generate a lock token for self-lock
@@ -133,7 +146,7 @@ export default function InfluencerSettings({ data: initialData }: { data: any })
        if (response.ok) {
          const data = await response.json();
          // Clear local storage and redirect to locked page with the token
-         localStorage.removeItem('auth_token');
+         clearAccessToken();
          localStorage.removeItem('klip_user');
          document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
          document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
@@ -200,7 +213,7 @@ export default function InfluencerSettings({ data: initialData }: { data: any })
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem('auth_token');
+    clearAccessToken();
     localStorage.removeItem('klip_user');
     router.push('/auth/login');
   };

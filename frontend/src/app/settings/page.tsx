@@ -24,6 +24,7 @@ import {
 import InfluencerSettings from '@/components/settings/Influencer';
 import BusinessSettings from '@/components/settings/Business';
 import AdminSettings from '@/components/settings/Admin';
+import { getAccessToken } from '@/lib/token';
 
 export default function SettingsHub() {
   const [role, setRole] = useState<'influencer' | 'business' | 'admin' | null>(null);
@@ -46,8 +47,7 @@ export default function SettingsHub() {
        setError(null);
        
        try {
-          const token = localStorage.getItem('auth_token') || getCookie('access_token');
-         const storedUser = localStorage.getItem('klip_user');
+          const token = getAccessToken() || getCookie('access_token');
 
          if (!token || !storedUser) {
            throw new Error("Session expired. Please sign in again.");

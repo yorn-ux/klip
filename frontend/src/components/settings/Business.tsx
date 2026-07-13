@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import TeamPage from '@/components/business/team';
+import { clearAccessToken, getAccessToken } from '@/lib/token';
 import ApiRegistry from '@/components/business/api';
 
 export default function BusinessSettings({ data }: any) {
@@ -49,7 +50,13 @@ export default function BusinessSettings({ data }: any) {
 
     setUploadingAvatar(true);
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = getAccessToken();
+      if (!token) {
+        alert('Your session has expired. Please sign in again.');
+        router.push('/auth/login');
+        return;
+      }
+
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
       const formData = new FormData();
@@ -86,7 +93,13 @@ export default function BusinessSettings({ data }: any) {
   const freezeAccount = async () => {
     setIsFreezing(true);
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = getAccessToken();
+      if (!token) {
+        alert('Your session has expired. Please sign in again.');
+        router.push('/auth/login');
+        return;
+      }
+
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       
       const response = await fetch(`${API_URL}/api/v1/auth/security-lock/self`, {
@@ -99,7 +112,7 @@ export default function BusinessSettings({ data }: any) {
       
        if (response.ok) {
          const data = await response.json();
-         localStorage.removeItem('auth_token');
+         clearAccessToken();
          localStorage.removeItem('klip_user');
          document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
          document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
@@ -134,7 +147,7 @@ export default function BusinessSettings({ data }: any) {
   }, []);
 
    const handleLogout = () => {
-     localStorage.removeItem('auth_token');
+     clearAccessToken();
      localStorage.removeItem('klip_user');
      document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
      router.push('/auth/login');

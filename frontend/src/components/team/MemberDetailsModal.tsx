@@ -8,6 +8,7 @@ import {
   CheckCircle, XCircle, Lock,  RefreshCw
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { getAccessToken } from '@/lib/token';
 
 interface TeamMember {
   operator_id: string;
@@ -47,7 +48,7 @@ export default function MemberDetailsModal({ isOpen, onClose, member, onUpdate }
 
   const getAuthToken = () => {
     if (typeof window === 'undefined') return null;
-    return localStorage.getItem('auth_token') || localStorage.getItem('access_token');
+    return getAccessToken();
   };
 
   const startEditing = () => {

@@ -8,6 +8,7 @@ import {
   AlertCircle, Clock, XCircle, RotateCcw
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { getAccessToken } from '@/lib/token';
 
 export default function OnboardingKYC() {
   const { showToast } = useNotificationStore();
@@ -26,7 +27,7 @@ export default function OnboardingKYC() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
   const syncIdentity = useCallback(async (opId: string) => {
-    const token = localStorage.getItem('auth_token');
+    const token = getAccessToken();
     
     if (!API_URL || opId === 'N/A' || !token) {
       setIsSyncing(false);
@@ -108,7 +109,7 @@ export default function OnboardingKYC() {
     
     setIsProcessing(true);
     
-    const token = localStorage.getItem('auth_token');
+    const token = getAccessToken();
     const formData = new FormData();
     formData.append('document', idFile);
     formData.append('operator_id', operatorId);

@@ -11,6 +11,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { getAccessToken } from '@/lib/token';
 
 interface CampaignModalProps {
   isOpen: boolean;
@@ -167,7 +168,7 @@ export default function CampaignModal({ isOpen, onClose, campaign, mode = 'apply
 
    const getAuthToken = () => {
      if (typeof document === 'undefined') return null;
-     const localStorageToken = localStorage.getItem('auth_token');
+     const localStorageToken = getAccessToken();
      if (localStorageToken) return localStorageToken;
 
      const value = `; ${document.cookie}`;

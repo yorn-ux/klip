@@ -7,6 +7,7 @@ import {
   AlertCircle, X
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { getAccessToken } from '@/lib/token';
 
 interface ApiKey {
   id: string;
@@ -39,7 +40,7 @@ export default function ApiRegistry() {
        const parts = value.split(`; ${name}=`);
        if (parts.length === 2) return parts.pop()?.split(';').shift();
      };
-     return getCookie('access_token') || localStorage.getItem('auth_token');
+     return getCookie('access_token') || getAccessToken();
    }, []);
 
   // Check authentication on mount

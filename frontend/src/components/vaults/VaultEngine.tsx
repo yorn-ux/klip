@@ -197,7 +197,7 @@ export default function VaultEngine({
   // --- AUTH & WALLET LOGIC ---
   const getAuthToken = useCallback(() => {
     if (typeof document === 'undefined') return null;
-    return localStorage.getItem('auth_token');
+    return getAccessToken();
   }, []);
 
   const getWalletAddress = useCallback(() => {

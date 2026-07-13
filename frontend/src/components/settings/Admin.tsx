@@ -7,6 +7,7 @@ import {
    Plus, Trash2, CheckCircle, AlertCircle
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { getAccessToken } from '@/lib/token';
 
 // Types
 interface PlatformSettings {
@@ -78,8 +79,8 @@ export default function AdminSettings() {
   const getToken = (): string | null => {
     if (typeof window === 'undefined') return null;
     
-    const localToken = localStorage.getItem('auth_token');
-    if (localToken) return localToken;
+    const token = getAccessToken();
+    if (token) return token;
     
     const getCookie = (name: string): string | null => {
       const value = `; ${document.cookie}`;

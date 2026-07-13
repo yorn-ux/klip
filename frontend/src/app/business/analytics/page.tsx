@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { getAccessToken } from '@/lib/token';
 import { 
   ArrowUpRight, ArrowDownRight, Globe, Zap, ShieldCheck, 
   Download, RefreshCw, Activity, AlertCircle, BarChart3
@@ -36,7 +37,7 @@ export default function AnalyticsHub() {
        const parts = value.split(`; ${name}=`);
        if (parts.length === 2) return parts.pop()?.split(';').shift();
      };
-     return getCookie('access_token') || localStorage.getItem('auth_token');
+     return getCookie('access_token') || getAccessToken();
    };
 
   const fetchMetrics = useCallback(async () => {

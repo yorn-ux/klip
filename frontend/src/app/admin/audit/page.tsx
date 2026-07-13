@@ -9,6 +9,7 @@ import {
   UserCog, Activity
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { getAccessToken } from '@/lib/token';
 
 type AuditScope = 'all' | 'admin' | 'operator' | 'business' | 'influencer';
 
@@ -71,8 +72,8 @@ export default function EnhancedAuditLedger() {
    const getToken = useCallback((): string | null => {
      if (typeof window === 'undefined') return null;
      
-     const localToken = localStorage.getItem('auth_token');
-     if (localToken) return localToken;
+     const token = getAccessToken();
+     if (token) return token;
      
      const getCookie = (name: string): string | null => {
        const value = `; ${document.cookie}`;

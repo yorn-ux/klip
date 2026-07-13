@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { useRouter } from 'next/navigation';
+import { getAccessToken } from '@/lib/token';
 
 interface SystemHealth {
   api_status: string;
@@ -82,8 +83,8 @@ export default function NodeHealth() {
   const getToken = (): string | null => {
     if (typeof window === 'undefined') return null;
     
-    const localToken = localStorage.getItem('auth_token');
-    if (localToken) return localToken;
+    const token = getAccessToken();
+    if (token) return token;
     
     const getCookie = (name: string): string | null => {
       const value = `; ${document.cookie}`;

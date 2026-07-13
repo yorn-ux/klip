@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import VaultEngine from '@/components/vaults/VaultEngine';
+import { getAccessToken } from '@/lib/token';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
@@ -120,7 +121,7 @@ export default function UnifiedVaultPage() {
     
     isFetching.current = true;
     setError(null);
-    const token = localStorage.getItem('auth_token');
+    const token = getAccessToken();
 
     try {
       const headers = {
@@ -272,7 +273,7 @@ export default function UnifiedVaultPage() {
       return;
       
       /*
-      const token = localStorage.getItem('auth_token');
+      const token = getAccessToken();
       const response = await fetch(`${API_BASE}/api/v1/vaults/export?role=${role}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });

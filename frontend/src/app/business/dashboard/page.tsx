@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { getAccessToken } from '@/lib/token';
 
 interface Transaction {
   id: string;
@@ -44,7 +45,6 @@ export default function BusinessDashboard() {
    const getAuthToken = useCallback(() => {
      try {
        // eslint-disable-next-line @typescript-eslint/no-var-requires
-       const { getAccessToken } = require('@/lib/token');
        return getAccessToken();
      } catch (err) {
        if (typeof document === 'undefined') return null;
@@ -56,7 +56,7 @@ export default function BusinessDashboard() {
          if (parts.length === 2) return parts.pop()?.split(';').shift();
          return null;
        };
-       return getCookie('access_token') || localStorage.getItem('auth_token');
+       return getCookie('access_token') || getAccessToken();
      }
    }, []);
 

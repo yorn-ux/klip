@@ -11,6 +11,7 @@ import {
 import InviteMemberModal from '@/components/auth/InviteMemberModal';
 import MemberDetailsModal from '@/components/team/MemberDetailsModal';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { getAccessToken } from '@/lib/token';
 
 interface TeamMember {
   operator_id: string;
@@ -70,7 +71,7 @@ export default function TeamPage() {
 
   const getAuthToken = useCallback(() => {
     if (typeof window === 'undefined') return null;
-    return localStorage.getItem('auth_token') || localStorage.getItem('access_token');
+    return getAccessToken();
   }, []);
 
   const fetchTeam = useCallback(async () => {

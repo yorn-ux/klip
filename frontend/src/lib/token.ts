@@ -2,6 +2,7 @@
 export function setAccessToken(token: string, expiresInSeconds: number) {
   try {
     localStorage.setItem('access_token', token);
+    localStorage.setItem('auth_token', token);
     const exp = Date.now() + expiresInSeconds * 1000;
     localStorage.setItem('access_token_exp', exp.toString());
   } catch (err) {
@@ -12,6 +13,7 @@ export function setAccessToken(token: string, expiresInSeconds: number) {
 export function clearAccessToken() {
   try {
     localStorage.removeItem('access_token');
+    localStorage.removeItem('auth_token');
     localStorage.removeItem('access_token_exp');
   } catch (err) {
     console.error('Failed to clear access token:', err);
@@ -21,14 +23,15 @@ export function clearAccessToken() {
 export function getAccessToken(): string | null {
   try {
     const exp = localStorage.getItem('access_token_exp');
-    if (!exp) return null;
-    const expNum = Number(exp);
-    if (Number.isNaN(expNum) || Date.now() > expNum) {
-      // expired
-      clearAccessToken();
-      return null;
+    if (exp) {
+      const expNum = Number(exp);
+      if (Number.isNaN(expNum) || Date.now() > expNum) {
+        clearAccessToken();
+        return null;
+      }
     }
-    return localStorage.getItem('access_token');
+
+    return localStorage.getItem('access_token') || localStorage.getItem('auth_token');
   } catch (err) {
     console.error('Failed to read access token:', err);
     return null;

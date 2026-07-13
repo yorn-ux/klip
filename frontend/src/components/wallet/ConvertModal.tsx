@@ -8,6 +8,7 @@ import {
   Clock, Shield
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { getAccessToken } from '@/lib/token';
 
 interface ConvertModalProps {
   isOpen: boolean;
@@ -66,7 +67,7 @@ export default function ConvertModal({ isOpen, onClose, balances, onSuccess }: C
 
    // Auth helper
    const getAuthToken = () => {
-     return localStorage.getItem('auth_token') || 
+     return getAccessToken() || 
             document.cookie.split('; ').find(row => row.startsWith('access_token='))?.split('=')[1];
    };
 
